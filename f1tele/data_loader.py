@@ -195,7 +195,8 @@ def get_fastest_lap(
             if col not in telem.columns:
                 telem[col] = 0
 
-        telem = telem[list(needed)].copy()
+        gps_cols = [c for c in ("X", "Y") if c in telem.columns]
+        telem = telem[list(needed) + gps_cols].copy()
         telem = telem.dropna(subset=["Distance", "Speed"])
         telem = telem.sort_values("Distance").reset_index(drop=True)
 
@@ -312,3 +313,72 @@ def get_available_sessions(year: int) -> pd.DataFrame:
     except Exception as exc:
         console.print(f"[red]Błąd pobierania harmonogramu: {exc}[/red]")
         return pd.DataFrame()
+
+
+def get_session_drivers_list(
+    year: int,
+    round_number: int | str,
+    session_type: str = "Q",
+) -> list[dict]:
+    """
+    Szybko pobiera listę kierowców z sesji bez ładowania telemetrii.
+
+    Returns:
+        Lista słowników {abbr, full_name, team}
+    """
+    ff1_session = fastf1.get_session(year, round_number, session_type)
+    ff1_session.load(telemetry=False, weather=False, messages=False)
+
+    result: list[dict] = []
+    for abbr in ff1_session.drivers:
+        try:
+            info = ff1_session.get_driver(abbr)
+            full_name = str(info.get("FullName", abbr))
+            team = str(info.get("TeamName", ""))
+        except Exception:
+            full_name = str(abbr)
+            team = ""
+        result.append({"abbr": str(abbr), "full_name": full_name, "team": team})
+
+    return result
+
+
+def get_race_pace_data(
+    session_data: SessionData,
+    drivers: list[str],
+) -> pd.DataFrame:
+    """
+    Pobiera wszystkie prawidłowe okrążenia każdego kierowcy do analizy tempa wyścigu.
+    Filtruje pit-lapy i outliery (pick_quicklaps).
+
+    Returns:
+        DataFrame z kolumnami: Driver, LapNumber, LapTime_s, Compound, Stint, Color
+    """
+    ff1 = session_data._session
+    rows: list[dict] = []
+
+    for drv in drivers:
+        try:
+            drv_laps = ff1.laps.pick_drivers(drv.upper()).pick_quicklaps()
+            if drv_laps.empty:
+                continue
+            color = get_driver_color(drv)
+            for _, lap in drv_laps.iterrows():
+                if not pd.notna(lap["LapTime"]):
+                    continue
+                try:
+                    stint = int(lap["Stint"]) if pd.notna(lap.get("Stint")) else 0
+                except (TypeError, ValueError):
+                    stint = 0
+                rows.append({
+                    "Driver":    drv.upper(),
+                    "LapNumber": int(lap["LapNumber"]),
+                    "LapTime_s": float(lap["LapTime"].total_seconds()),
+                    "Compound":  str(lap.get("Compound", "UNKNOWN")),
+                    "Stint":     stint,
+                    "Color":     color,
+                })
+        except Exception as exc:
+            console.print(f"[yellow]⚠ Race pace: błąd dla {drv}: {exc}[/yellow]")
+
+    return pd.DataFrame(rows) if rows else pd.DataFrame()

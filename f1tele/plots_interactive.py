@@ -8,6 +8,7 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+import plotly.colors as pc
 from plotly.subplots import make_subplots
 from scipy.interpolate import interp1d
 
@@ -848,5 +849,384 @@ def plot_gear_map_interactive(
         xaxis=dict(visible=False, scaleanchor="y", scaleratio=1),
         yaxis=dict(visible=False),
         plot_bgcolor="#0A0A0A",
+    )
+    return fig
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 10. RACE PACE
+# ══════════════════════════════════════════════════════════════════════════════
+_COMPOUND_SYMBOL: dict[str, str] = {
+    "SOFT":         "circle",
+    "MEDIUM":       "square",
+    "HARD":         "diamond",
+    "INTERMEDIATE": "triangle-up",
+    "WET":          "triangle-down",
+    "UNKNOWN":      "x",
+}
+_COMPOUND_COLOR: dict[str, str] = {
+    "SOFT":         "#FF3333",
+    "MEDIUM":       "#FFD700",
+    "HARD":         "#EEEEEE",
+    "INTERMEDIATE": "#39B54A",
+    "WET":          "#4499FF",
+    "UNKNOWN":      "#888888",
+}
+
+
+def plot_race_pace_interactive(
+    race_pace_df: pd.DataFrame,
+    drivers_data: dict[str, DriverLapData],
+    session_data: SessionData,
+) -> go.Figure:
+    """
+    Tempo wyścigu: czas okrążenia vs numer okrążenia.
+    Scatter per opona + linia trendu (rolling avg) + pasek składu opon.
+    """
+    if race_pace_df.empty:
+        return go.Figure()
+
+    fig = make_subplots(
+        rows=2, cols=1,
+        shared_xaxes=True,
+        row_heights=[5, 1],
+        vertical_spacing=0.03,
+        subplot_titles=["Czas okrążenia [s]", "Opona / stint"],
+    )
+
+    drivers = race_pace_df["Driver"].unique()
+
+    for drv in drivers:
+        drv_df = race_pace_df[race_pace_df["Driver"] == drv].sort_values("LapNumber")
+        if drv_df.empty:
+            continue
+        color = drv_df["Color"].iloc[0]
+        laps = drv_df["LapNumber"].values
+        times = drv_df["LapTime_s"].values
+
+        # Rolling average (window 3–5)
+        win = min(5, max(3, len(times)))
+        rolling = (
+            pd.Series(times)
+            .rolling(win, center=True, min_periods=1)
+            .mean()
+            .values
+        )
+
+        # Scatter per compound type
+        shown_legend_for_drv = False
+        for compound in drv_df["Compound"].unique():
+            mask = drv_df["Compound"] == compound
+            sub = drv_df[mask]
+            symbol = _COMPOUND_SYMBOL.get(compound, "circle")
+            c_border = _COMPOUND_COLOR.get(compound, "#888888")
+
+            fig.add_trace(go.Scatter(
+                x=sub["LapNumber"],
+                y=sub["LapTime_s"],
+                mode="markers",
+                marker=dict(
+                    color=color,
+                    symbol=symbol,
+                    size=9,
+                    line=dict(color=c_border, width=1.8),
+                ),
+                name=f"{drv}",
+                legendgroup=drv,
+                showlegend=not shown_legend_for_drv,
+                hovertemplate=(
+                    f"<b>{drv}</b><br>"
+                    "Okrążenie: %{x}<br>"
+                    f"Czas: %{{y:.3f}} s<br>"
+                    f"Opona: {compound}<extra></extra>"
+                ),
+            ), row=1, col=1)
+            shown_legend_for_drv = True
+
+        # Trend
+        fig.add_trace(go.Scatter(
+            x=laps, y=rolling,
+            mode="lines",
+            line=dict(color=color, width=2.2),
+            legendgroup=drv,
+            showlegend=False,
+            hoverinfo="skip",
+        ), row=1, col=1)
+
+    # Compound color legend entries (once each)
+    added_compounds: set[str] = set()
+    for drv in drivers:
+        drv_df = race_pace_df[race_pace_df["Driver"] == drv]
+        for compound in drv_df["Compound"].unique():
+            if compound in added_compounds:
+                continue
+            added_compounds.add(compound)
+            c_color = _COMPOUND_COLOR.get(compound, "#888888")
+            symbol = _COMPOUND_SYMBOL.get(compound, "circle")
+            fig.add_trace(go.Scatter(
+                x=[None], y=[None],
+                mode="markers",
+                marker=dict(color=c_color, symbol=symbol, size=10),
+                name=compound,
+                legendgroup=f"_cpd_{compound}",
+                showlegend=True,
+            ), row=1, col=1)
+
+    # Stint compound bars (row 2) — one colored bar per lap per driver
+    for drv_i, drv in enumerate(drivers):
+        drv_df = race_pace_df[race_pace_df["Driver"] == drv].sort_values("LapNumber")
+        if drv_df.empty:
+            continue
+        offset = drv_i * 0.8
+        for compound in drv_df["Compound"].unique():
+            mask = drv_df["Compound"] == compound
+            sub_laps = drv_df[mask]["LapNumber"].values
+            c_color = _COMPOUND_COLOR.get(compound, "#888888")
+            fig.add_trace(go.Bar(
+                x=sub_laps,
+                y=[0.7] * len(sub_laps),
+                base=offset,
+                marker_color=c_color,
+                marker_line_width=0,
+                name=f"{drv} {compound}",
+                legendgroup=drv,
+                showlegend=False,
+                hovertemplate=f"{drv}: {compound}  Lap %{{x}}<extra></extra>",
+                width=0.9,
+            ), row=2, col=1)
+
+    title = (
+        f"{session_data.event_name} {session_data.year}  |  "
+        f"Race Pace  |  {session_data.session_type}"
+    )
+    _dark(fig, title=title, height=680)
+    fig.update_layout(barmode="stack")
+    fig.update_yaxes(**_axis("Czas [s]"),     row=1, col=1)
+    fig.update_yaxes(visible=False,           row=2, col=1)
+    fig.update_xaxes(**_axis("Okrążenie"),    row=2, col=1)
+
+    for ann in fig.layout.annotations:
+        ann.font = dict(color="#AAAAAA", size=9, family="Courier New")
+
+    return fig
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 11. ANIMACJA TORU
+# ══════════════════════════════════════════════════════════════════════════════
+def plot_track_animation_interactive(
+    drivers_data: dict[str, DriverLapData],
+    session_data: SessionData,
+    n_frames: int = 100,
+) -> Optional[go.Figure]:
+    """
+    Animacja Plotly: pozycje kierowców poruszające się po torze.
+    Wymaga danych GPS (kolumny X, Y w telemetrii).
+    Osie czasu znormalizowane do 0–1 (procent ukończonego okrążenia).
+    """
+    # Sprawdź dostępność GPS
+    gps_drivers = {
+        drv: data for drv, data in drivers_data.items()
+        if "X" in data.telemetry.columns and "Y" in data.telemetry.columns
+    }
+    if not gps_drivers:
+        return None
+
+    TRAIL = 14  # długość śladu
+
+    # Dla każdego kierowcy: znormalizowany czas → X, Y
+    driver_pos: dict[str, dict] = {}
+    for drv, data in gps_drivers.items():
+        t = data.telemetry
+        dist = t["Distance"].values
+        speed = np.maximum(t["Speed"].values, 1.0)
+        step = np.diff(dist, prepend=dist[0])
+        step = np.maximum(step, 0.0)
+        dt = step / (speed / 3.6)
+        cum_time = np.cumsum(dt)
+        t_norm = cum_time / max(cum_time[-1], 1e-9)
+
+        _, idx = np.unique(t_norm, return_index=True)
+        t_u, x_u, y_u = t_norm[idx], t["X"].values[idx], t["Y"].values[idx]
+
+        common_t = np.linspace(0, 1, n_frames)
+        xi = interp1d(t_u, x_u, fill_value="extrapolate", bounds_error=False)(common_t)
+        yi = interp1d(t_u, y_u, fill_value="extrapolate", bounds_error=False)(common_t)
+
+        driver_pos[drv] = {
+            "x": xi, "y": yi,
+            "color": data.color,
+            "lap_time": data.lap_time_str,
+        }
+
+    # Obrys toru z referencyjnego kierowcy
+    ref_t = next(iter(gps_drivers.values())).telemetry
+    x_track = ref_t["X"].values
+    y_track = ref_t["Y"].values
+
+    # ── Bazowy rysunek ────────────────────────────────────────────────────────
+    # Trasy statyczne (tor) mają indeksy 0, 1, 2.
+    # Trasy kierowców (ślad + kropka) mają indeksy 3, 4 / 5, 6 / ...
+    # Klatki animacji aktualizują TYLKO trasy kierowców (oszczędność danych).
+    fig = go.Figure()
+
+    # Tło toru (dwie warstwy dla efektu grubości)
+    for w, c in [(12, "#222222"), (7, "#303030")]:
+        fig.add_trace(go.Scatter(
+            x=x_track, y=y_track, mode="lines",
+            line=dict(color=c, width=w),
+            showlegend=False, hoverinfo="skip",
+        ))
+
+    # Linia start/meta
+    fig.add_trace(go.Scatter(
+        x=[x_track[0]], y=[y_track[0]],
+        mode="markers+text",
+        marker=dict(color="#FFFF00", size=14, symbol="diamond"),
+        text=["S/F"], textposition="top right",
+        textfont=dict(color="#FFFF00", size=9, family="Courier New"),
+        showlegend=False, hoverinfo="skip",
+    ))
+
+    # Ślad i kropka każdego kierowcy (stan początkowy — klatka 0)
+    n_static = 3  # liczba statycznych tras toru powyżej
+    drv_list = list(driver_pos.keys())
+    drv_trace_indices: list[int] = []  # indeksy tras kierowców do aktualizacji w klatkach
+
+    for i, drv in enumerate(drv_list):
+        pos = driver_pos[drv]
+        trail_idx = n_static + i * 2
+        dot_idx   = n_static + i * 2 + 1
+        drv_trace_indices.extend([trail_idx, dot_idx])
+
+        fig.add_trace(go.Scatter(
+            x=[pos["x"][0]], y=[pos["y"][0]],
+            mode="lines",
+            line=dict(color=pos["color"], width=2.5),
+            showlegend=False, hoverinfo="skip",
+        ))
+        fig.add_trace(go.Scatter(
+            x=[pos["x"][0]], y=[pos["y"][0]],
+            mode="markers+text",
+            marker=dict(color=pos["color"], size=16,
+                        line=dict(color="#FFFFFF", width=2)),
+            text=[drv],
+            textposition="top center",
+            textfont=dict(color=pos["color"], size=9, family="Courier New"),
+            name=f"{drv}  {pos['lap_time']}",
+            showlegend=True,
+            hovertemplate=f"<b>{drv}</b><extra></extra>",
+        ))
+
+    # ── Klatki animacji ───────────────────────────────────────────────────────
+    # Każda klatka zawiera TYLKO trasy kierowców (ślad + kropka).
+    # Parametr `traces=` wskazuje Plotly, które trasy zaktualizować —
+    # tor pozostaje statyczny w figureie bazowym i nie jest kopiowany.
+    frames: list[go.Frame] = []
+    for fi in range(n_frames):
+        fd: list[go.BaseTraceType] = []
+
+        for drv in drv_list:
+            pos = driver_pos[drv]
+            start = max(0, fi - TRAIL)
+            # Ślad
+            fd.append(go.Scatter(
+                x=list(pos["x"][start: fi + 1]),
+                y=list(pos["y"][start: fi + 1]),
+                mode="lines",
+                line=dict(color=pos["color"], width=2.5),
+                showlegend=False, hoverinfo="skip",
+            ))
+            # Aktualna pozycja
+            fd.append(go.Scatter(
+                x=[pos["x"][fi]], y=[pos["y"][fi]],
+                mode="markers+text",
+                marker=dict(color=pos["color"], size=16,
+                            line=dict(color="#FFFFFF", width=2)),
+                text=[drv],
+                textposition="top center",
+                textfont=dict(color=pos["color"], size=9, family="Courier New"),
+                showlegend=False,
+            ))
+
+        frames.append(go.Frame(
+            data=fd,
+            traces=drv_trace_indices,  # aktualizuj tylko trasy kierowców
+            name=str(fi),
+        ))
+
+    fig.frames = frames
+
+    # ── Kontrolki animacji ────────────────────────────────────────────────────
+    step_labels = [f"{int(i / n_frames * 100)}%" for i in range(n_frames)]
+    fig.update_layout(
+        updatemenus=[{
+            "type": "buttons",
+            "showactive": False,
+            "x": 0.5, "y": -0.06,
+            "xanchor": "center", "yanchor": "top",
+            "bgcolor": "#1A1A1A",
+            "bordercolor": "#444444",
+            "font": {"color": "#CCCCCC"},
+            "buttons": [
+                {
+                    "label": "▶  Play",
+                    "method": "animate",
+                    "args": [None, {
+                        "frame": {"duration": 55, "redraw": True},
+                        "fromcurrent": True,
+                        "transition": {"duration": 15, "easing": "linear"},
+                    }],
+                },
+                {
+                    "label": "⏸  Pauza",
+                    "method": "animate",
+                    "args": [[None], {
+                        "frame": {"duration": 0, "redraw": False},
+                        "mode": "immediate",
+                        "transition": {"duration": 0},
+                    }],
+                },
+            ],
+        }],
+        sliders=[{
+            "active": 0,
+            "steps": [
+                {
+                    "args": [[str(i)], {
+                        "frame": {"duration": 55, "redraw": True},
+                        "mode": "immediate",
+                        "transition": {"duration": 0},
+                    }],
+                    "label": step_labels[i],
+                    "method": "animate",
+                }
+                for i in range(n_frames)
+            ],
+            "y": 0, "x": 0.07, "len": 0.86,
+            "pad": {"t": 55},
+            "currentvalue": {
+                "prefix": "Postęp okrążenia: ",
+                "visible": True,
+                "xanchor": "center",
+                "font": {"color": "#CCCCCC", "size": 11, "family": "Courier New"},
+            },
+            "bgcolor": "#1A1A1A",
+            "bordercolor": "#444444",
+            "font": {"color": "#AAAAAA", "size": 8},
+            "tickcolor": "#444444",
+        }],
+    )
+
+    title = (
+        f"{session_data.event_name} {session_data.year}  |  "
+        f"Animacja okrążenia  |  {session_data.session_type}"
+    )
+    _dark(fig, title=title, height=680)
+    fig.update_layout(
+        xaxis=dict(visible=False, scaleanchor="y", scaleratio=1),
+        yaxis=dict(visible=False),
+        plot_bgcolor="#0A0A0A",
+        margin=dict(l=30, r=30, t=70, b=140),
     )
     return fig
