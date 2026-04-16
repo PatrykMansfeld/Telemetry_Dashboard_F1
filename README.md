@@ -1,21 +1,23 @@
-# 🏎 F1 Telemetria — Porównanie stylu jazdy kierowców
+# 🏎 F1 Telemetria — Analiza danych kierowców F1
 
-Rozbudowane narzędzie CLI do analizy i wizualizacji danych telemetrycznych Formuły 1.
-Korzysta z biblioteki **FastF1** (Python) — daje dostęp do prędkości, gazu, hamulca, biegów i pozycji GPS zakręt po zakręcie.
+Interaktywny dashboard do analizy i wizualizacji danych telemetrycznych Formuły 1.
+Korzysta z biblioteki **FastF1** — daje dostęp do prędkości, gazu, hamulca, biegów i pozycji GPS zakręt po zakręcie.
 
 ---
 
 ## Funkcje
 
 | Moduł | Opis |
-|---|---|
-| **Telemetria** | Prędkość, gaz, hamulec, biegi, RPM — wspólny wykres z deltą czasu |
-| **Zakręty** | Wykrycie zakrętów, punkt hamowania, apeks, wyjście z gazu |
+| --- | --- |
+| **Telemetria** | Prędkość, gaz, hamulec, biegi, RPM — interaktywny wykres z deltą czasu |
+| **Zakręty** | Wykrycie zakrętów, punkt hamowania, prędkość apeksu, wyjście z gazu |
 | **Mini-sektory** | Dominacja w N mini-sektorach, skumulowana delta, mapa ciepła |
 | **Sektory** | Statystyki S1/S2/S3: czas, prędkości, % gazu, % hamowania |
 | **Styl jazdy** | Radar chart + wykres słupkowy 10 metryk charakteryzujących styl |
-| **Mapa toru** | Dominacja na torze, mapa prędkości, mapa biegów (wymaga danych GPS) |
-| **Raport HTML** | Pełny raport z tabelami i wykresami |
+| **Mapa toru** | Dominacja, gradient prędkości, biegi (wymaga danych GPS) |
+| **Animacja toru** | Animowana pozycja kierowców na torze klatka po klatce |
+| **Race Pace** | Czasy okrążeń wyścigu, trend, skład opon, pit-stopy |
+| **Cross-session** | Porównanie telemetrii i stylu jazdy między dwoma sesjami / latami |
 
 ---
 
@@ -24,8 +26,8 @@ Korzysta z biblioteki **FastF1** (Python) — daje dostęp do prędkości, gazu,
 ```bash
 # Utwórz środowisko wirtualne
 python -m venv venv
-venv\Scripts\activate          # Windows
-# source venv/bin/activate     # Linux/Mac
+venv\Scripts\activate        # Windows
+# source venv/bin/activate   # Linux/Mac
 
 # Zainstaluj zależności
 pip install -r requirements.txt
@@ -33,9 +35,7 @@ pip install -r requirements.txt
 
 ---
 
-## Frontend (Streamlit)
-
-Oprócz CLI dostępny jest pełny **interfejs webowy** — uruchom i otwórz w przeglądarce:
+## Uruchomienie
 
 ```bash
 streamlit run app.py
@@ -43,98 +43,58 @@ streamlit run app.py
 
 Aplikacja otworzy się pod adresem `http://localhost:8501`.
 
-### Co oferuje frontend
+---
 
-| Sekcja | Opis |
+## Zakładki dashboardu
+
+| Zakładka | Opis |
 | --- | --- |
-| **Sidebar** | Wybór roku, rundy, sesji, kierowców i opcji analizy |
-| **Podsumowanie** | Tabela wyników + karty kierowców |
-| **Telemetria** | Pełny 6-panelowy wykres z możliwością pobrania |
-| **Zakręty** | Wykresy + tabela danych zakrętowych |
-| **Sektory** | Mini-sektory, dominacja, mapa ciepła |
-| **Styl jazdy** | Radar + tabela 10 metryk |
-| **Mapa toru** | Mapy dominacji / prędkości / biegów |
-| **Raport** | Podgląd i pobieranie raportu HTML |
+| **Podsumowanie** | Tabela wyników, karty kierowców z sektorami i składem opon |
+| **Telemetria** | Interaktywny 6-panelowy wykres (prędkość, delta, gaz, hamulec, biegi, RPM) |
+| **Zakręty** | Wykresy porównawcze + tabela danych zakrętowych |
+| **Sektory** | Mini-sektory, mapa dominacji, mapa ciepła S1/S2/S3 |
+| **Styl jazdy** | Radar chart + słupki porównawcze 10 metryk |
+| **Mapa toru** | Mapy dominacji / prędkości / biegów + animacja okrążenia |
+| **Race Pace** | Wykres tempa wyścigu, składy opon, statystyki okrążeń |
+| **Cross-session** | Porównanie sesji A vs B (np. Monaco 2023 vs 2024) |
+| **Info** | Lista wygenerowanych wykresów, informacje o sesji B |
 
 ---
 
-## Szybki start
+## Sidebar — opcje
 
-### Porównaj telemetrię w kwalifikacjach
-
-```bash
-python main.py compare --year 2024 --round 5 --session Q --drivers VER,HAM,NOR
-```
-
-### Porównaj w wyścigu
-
-```bash
-python main.py compare --year 2024 --round Monaco --session R --drivers LEC,VER,NOR
-```
-
-### Wybierz konkretne okrążenia
-
-```bash
-python main.py compare -y 2024 -r 1 -s Q -d VER,NOR --laps VER=1,NOR=3
-```
-
-### Uruchom tylko wybrane moduły
-
-```bash
-python main.py compare -y 2024 -r 5 -s Q -d VER,HAM --modules telemetry,style
-```
-
-### Wyświetl harmonogram sezonu
-
-```bash
-python main.py schedule --year 2024
-```
-
-### Wyświetl kierowców w sesji
-
-```bash
-python main.py drivers --year 2024 --round 5 --session Q
-```
-
----
-
-## Opcje polecenia `compare`
-
-| Opcja | Skrót | Opis |
-|---|---|---|
-| `--year` | `-y` | Rok sezonu (np. 2024) |
-| `--round` | `-r` | Numer rundy lub nazwa GP (np. `5` lub `Monaco`) |
-| `--session` | `-s` | Typ sesji: `Q`, `R`, `FP1`, `FP2`, `FP3`, `S`, `SS` |
-| `--drivers` | `-d` | Kody kierowców oddzielone `,` (np. `VER,HAM,NOR`) |
-| `--laps` | `-l` | Konkretne okrążenia: `VER=1,HAM=3` |
-| `--mini-sectors` | `-m` | Liczba mini-sektorów (domyślnie 25) |
-| `--modules` | | Moduły: `all` lub `telemetry,corners,sectors,style,track,report` |
-| `--no-save` | | Nie zapisuj wykresów |
-| `--show` | | Wyświetl wykresy interaktywnie |
-| `--no-report` | | Nie generuj raportu HTML |
+- Rok, runda (numer lub nazwa GP), typ sesji (`Q / R / FP1 / FP2 / FP3 / S / SS`)
+- Dynamiczne ładowanie listy kierowców z wybranej sesji
+- Ręczny wpis kodów kierowców (nadpisuje multiselect)
+- Wybór modułów analizy (można wyłączyć niepotrzebne)
+- Liczba mini-sektorów (10–50)
+- Porównanie sesji B (cross-session) w rozwijanym panelu
 
 ---
 
 ## Struktura projektu
 
-```
-F1_Tele/
-├── main.py                  ← Główny punkt wejścia CLI
-├── config.py                ← Konfiguracja
+```text
+Telemetry_Dashboard_F1/
+├── app.py                       ← Frontend Streamlit (główny punkt wejścia)
+├── config.py                    ← Konfiguracja (ścieżki, progi, parametry)
 ├── requirements.txt
+├── .streamlit/
+│   └── config.toml              ← Motyw Streamlit
 ├── f1tele/
 │   ├── __init__.py
-│   ├── data_loader.py       ← Ładowanie danych FastF1 + cache
-│   ├── lap_analysis.py      ← Wykresy telemetrii (prędkość, gaz, hamulec, biegi)
-│   ├── corner_analysis.py   ← Analiza zakręt-po-zakręcie
-│   ├── sector_analysis.py   ← Mini-sektory i sektory
-│   ├── driver_style.py      ← Odcisk palca stylu jazdy + radar
-│   ├── track_map.py         ← Mapy toru (dominacja, prędkość, biegi)
-│   └── report.py            ← Generator raportu HTML
-├── cache/                   ← Cache FastF1 (automatyczny)
+│   ├── data_loader.py           ← Ładowanie danych FastF1 + cache
+│   ├── plots_interactive.py     ← Wykresy interaktywne (Plotly)
+│   ├── lap_analysis.py          ← Wykresy telemetrii (matplotlib)
+│   ├── corner_analysis.py       ← Analiza zakręt-po-zakręcie
+│   ├── sector_analysis.py       ← Mini-sektory i sektory
+│   ├── driver_style.py          ← Odcisk palca stylu jazdy + radar
+│   ├── track_map.py             ← Mapy toru (matplotlib)
+│   └── report.py                ← Generator raportu HTML
+├── cache/                       ← Cache FastF1 (automatyczny, w .gitignore)
 └── output/
-    ├── plots/               ← Zapisane wykresy PNG
-    └── reports/             ← Raporty HTML
+    ├── plots/                   ← Zapisane wykresy PNG
+    └── reports/                 ← Raporty HTML
 ```
 
 ---
@@ -142,7 +102,7 @@ F1_Tele/
 ## Metryki stylu jazdy
 
 | Metryka | Opis |
-|---|---|
+| --- | --- |
 | **Pełny gaz** | % okrążenia z throttle > 90% |
 | **Intensywne hamowanie** | % okrążenia z brake > 20% |
 | **Wybieg (coasting)** | % okrążenia bez gazu i bez hamulca |
@@ -160,28 +120,10 @@ F1_Tele/
 
 - Python 3.10+
 - Połączenie z internetem (pierwsze pobranie danych FastF1)
-- Wolne miejsce na dysku (~500 MB cache na sezon)
-
----
-
-## Przykładowe wyniki
-
-Po uruchomieniu w folderze `output/plots/` pojawią się:
-
-- `*_telemetry.png` — 6-panelowy wykres telemetrii
-- `*_corners.png` — słupki zakręt-po-zakręcie
-- `*_mini_sectors.png` — dominacja w mini-sektorach
-- `*_sector_heatmap.png` — mapa ciepła sektorów
-- `*_radar.png` — radar stylu jazdy
-- `*_style_bars.png` — porównanie metryk
-- `*_track_dominance.png` — mapa toru (jeśli dostępne GPS)
-- `*_speed_map.png` — mapa prędkości na torze
-- `*_gear_map.png` — mapa biegów na torze
-
-Raport HTML: `output/reports/*.html`
+- ~500 MB wolnego miejsca na dysku (cache na sezon)
 
 ---
 
 ## Licencja
 
-Projekt edukacyjny. Dane F1 pochodzą z FastF1 / Ergast API.
+Projekt edukacyjny. Dane F1 pochodzą z FastF1 / Ergast API — wyłącznie do użytku niekomercyjnego.
