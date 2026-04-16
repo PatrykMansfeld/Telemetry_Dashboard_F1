@@ -690,6 +690,15 @@ hr { border-color: var(--border) !important; margin: 16px 0 !important; }
 
 # ── Stałe ─────────────────────────────────────────────────────────────────────
 SESSIONS = ["Q", "R", "FP1", "FP2", "FP3", "S", "SS"]
+SESSION_LABELS = {
+    "Q":   "Kwalifikacje",
+    "R":   "Wyścig",
+    "FP1": "Trening 1",
+    "FP2": "Trening 2",
+    "FP3": "Trening 3",
+    "S":   "Sprint",
+    "SS":  "Sprint Shootout",
+}
 
 KNOWN_DRIVERS = [
     "VER", "PER", "HAM", "RUS", "LEC", "SAI", "NOR", "PIA",
@@ -795,7 +804,8 @@ with st.sidebar:
         "Typ sesji",
         SESSIONS,
         index=0,
-        help="Q=Kwalifikacje, R=Wyścig, FP1/FP2/FP3=Treningi, S=Sprint, SS=Sprint Shootout",
+        format_func=lambda s: SESSION_LABELS.get(s, s),
+        help="Wybierz typ sesji do analizy",
     )
 
     # ── KIEROWCY — DYNAMICZNA LISTA ───────────────────────────────────────────
@@ -1489,9 +1499,9 @@ with tabs[6]:
                 .sort_values("Śr. [s]")
             )
             st.dataframe(pace_stats, use_container_width=True, hide_index=True)
-    elif session_data.session_type != "R":
+    elif session_data.session_type != SESSION_LABELS["R"]:
         st.info(
-            "ℹ️ Race Pace jest najbardziej miarodajny dla sesji wyścigowych (R). "
+            "ℹ️ Race Pace jest najbardziej miarodajny dla sesji wyścigowych. "
             f"Aktualna sesja: **{session_data.session_type}**. "
             "Dane są dostępne, ale mogą być ograniczone."
         )

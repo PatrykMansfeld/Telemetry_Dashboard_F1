@@ -77,13 +77,24 @@ class DriverLapData:
     team: str = ""
 
 
+SESSION_LABELS: dict[str, str] = {
+    "Q":   "Kwalifikacje",
+    "R":   "Wyścig",
+    "FP1": "Trening 1",
+    "FP2": "Trening 2",
+    "FP3": "Trening 3",
+    "S":   "Sprint",
+    "SS":  "Sprint Shootout",
+}
+
+
 @dataclass
 class SessionData:
     """Dane całej sesji wyścigowej."""
     year: int
     round_number: int
     event_name: str
-    session_type: str        # Q, R, FP1, FP2, FP3, S, SS
+    session_type: str        # pełna nazwa sesji (np. Kwalifikacje, Wyścig)
     circuit_name: str
     country: str
     drivers: list[str] = field(default_factory=list)
@@ -135,7 +146,7 @@ def load_session(
             year=year,
             round_number=ff1_session.event.RoundNumber,
             event_name=str(event.get("EventName", f"GP #{round_number}")),
-            session_type=session_type,
+            session_type=SESSION_LABELS.get(session_type, session_type),
             circuit_name=str(event.get("Location", "Unknown")),
             country=str(event.get("Country", "Unknown")),
             _session=ff1_session,

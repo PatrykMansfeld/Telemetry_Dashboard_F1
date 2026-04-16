@@ -30,12 +30,12 @@ def _rgba(hex_color: str, alpha: float) -> str:
     return f"rgba({r},{g},{b},{alpha})"
 
 
-def _dark(fig: go.Figure, title: str = "", height: int = 600) -> go.Figure:
+def _dark(fig: go.Figure, title: str = "", height: int = 700) -> go.Figure:
     fig.update_layout(
-        title=dict(text=title, font=dict(color="#FFFFFF", size=13, family="Courier New")),
+        title=dict(text=title, font=dict(color="#FFFFFF", size=15, family="Courier New")),
         paper_bgcolor=_BG,
         plot_bgcolor=_PLOT,
-        font=dict(color=_TEXT, family="Courier New, monospace", size=11),
+        font=dict(color=_TEXT, family="Courier New, monospace", size=13),
         height=height,
         legend=dict(bgcolor="#222222", bordercolor="#444444", borderwidth=1,
                     font=dict(color=_TEXT)),
@@ -51,10 +51,10 @@ def _dark(fig: go.Figure, title: str = "", height: int = 600) -> go.Figure:
 
 def _axis(title: str = "") -> dict:
     return dict(
-        title=dict(text=title, font=dict(color=_TEXT, size=10)),
+        title=dict(text=title, font=dict(color=_TEXT, size=12)),
         gridcolor=_GRID,
         zerolinecolor=_GRID,
-        tickfont=dict(color=_AXIS, size=9),
+        tickfont=dict(color=_AXIS, size=10),
     )
 
 
@@ -220,7 +220,7 @@ def plot_telemetry_interactive(
         f"{session_data.event_name} {session_data.year}  |  "
         f"{session_data.session_type}  |  {session_data.circuit_name}"
     )
-    _dark(fig, title=title, height=950)
+    _dark(fig, title=title, height=1100)
 
     fig.update_yaxes(**_axis("V [km/h]"),       row=1, col=1)
     fig.update_yaxes(**_axis("Δt [s]"),          row=2, col=1)
@@ -232,7 +232,7 @@ def plot_telemetry_interactive(
     fig.update_xaxes(**_axis("Dystans [m]"),      row=6, col=1)
 
     for ann in fig.layout.annotations:
-        ann.font = dict(color="#AAAAAA", size=9, family="Courier New")
+        ann.font = dict(color="#AAAAAA", size=11, family="Courier New")
 
     return fig
 
@@ -300,7 +300,7 @@ def plot_corners_interactive(
         f"{session_data.event_name} {session_data.year}  |  "
         f"Analiza zakrętów  |  {session_data.session_type}"
     )
-    _dark(fig, title=title, height=700)
+    _dark(fig, title=title, height=850)
 
     fig.update_yaxes(**_axis("V [km/h]"),  row=1, col=1)
     fig.update_yaxes(**_axis("Dystans [m]"), row=2, col=1)
@@ -308,7 +308,7 @@ def plot_corners_interactive(
     fig.update_xaxes(**_axis("Zakręt"),      row=3, col=1)
 
     for ann in fig.layout.annotations:
-        ann.font = dict(color="#AAAAAA", size=9, family="Courier New")
+        ann.font = dict(color="#AAAAAA", size=11, family="Courier New")
 
     return fig
 
@@ -414,10 +414,10 @@ def plot_mini_sector_dominance_interactive(
         f"{session_data.event_name} {session_data.year}  |  "
         f"Dominacja mini-sektorów  |  {session_data.session_type}"
     )
-    _dark(fig, title=title, height=700)
+    _dark(fig, title=title, height=850)
 
     for ann in fig.layout.annotations:
-        ann.font = dict(color="#AAAAAA", size=9, family="Courier New")
+        ann.font = dict(color="#AAAAAA", size=11, family="Courier New")
 
     return fig
 
@@ -476,7 +476,7 @@ def plot_sector_heatmap_interactive(
             y=drivers,
             text=text,
             texttemplate="%{text}",
-            textfont=dict(size=10, color="#FFFFFF", family="Courier New"),
+            textfont=dict(size=11, color="#FFFFFF", family="Courier New"),
             colorscale="RdYlGn",
             zmin=0, zmax=1,
             showscale=False,
@@ -488,9 +488,9 @@ def plot_sector_heatmap_interactive(
             ),
         ), row=1, col=col_i)
 
-        fig.update_xaxes(tickfont=dict(color=_AXIS, size=9), row=1, col=col_i)
+        fig.update_xaxes(tickfont=dict(color=_AXIS, size=10), row=1, col=col_i)
         if col_i == 1:
-            fig.update_yaxes(tickfont=dict(color=_AXIS, size=9), row=1, col=col_i)
+            fig.update_yaxes(tickfont=dict(color=_AXIS, size=10), row=1, col=col_i)
         else:
             fig.update_yaxes(showticklabels=False, row=1, col=col_i)
 
@@ -498,10 +498,10 @@ def plot_sector_heatmap_interactive(
         f"{session_data.event_name} {session_data.year}  |  "
         f"Mapa ciepła sektorów  |  {session_data.session_type}"
     )
-    _dark(fig, title=title, height=max(350, len(drivers) * 70 + 120))
+    _dark(fig, title=title, height=max(500, len(drivers) * 90 + 150))
 
     for ann in fig.layout.annotations:
-        ann.font = dict(color="#AAAAAA", size=9, family="Courier New")
+        ann.font = dict(color="#AAAAAA", size=11, family="Courier New")
 
     return fig
 
@@ -545,10 +545,10 @@ def plot_radar_interactive(
         f"Styl jazdy  |  {session_data.session_type}"
     )
     fig.update_layout(
-        title=dict(text=title, font=dict(color="#FFFFFF", size=13, family="Courier New")),
+        title=dict(text=title, font=dict(color="#FFFFFF", size=15, family="Courier New")),
         paper_bgcolor=_BG,
-        font=dict(color=_TEXT, family="Courier New", size=10),
-        height=500,
+        font=dict(color=_TEXT, family="Courier New", size=13),
+        height=650,
         legend=dict(bgcolor="#222222", bordercolor="#444444", borderwidth=1,
                     font=dict(color=_TEXT)),
         margin=dict(l=60, r=60, t=70, b=60),
@@ -558,13 +558,13 @@ def plot_radar_interactive(
             angularaxis=dict(
                 gridcolor=_GRID,
                 linecolor="#444444",
-                tickfont=dict(color=_TEXT, size=9),
+                tickfont=dict(color=_TEXT, size=11),
             ),
             radialaxis=dict(
                 range=[0, 105],
                 gridcolor=_GRID,
                 linecolor="#444444",
-                tickfont=dict(color=_AXIS, size=8),
+                tickfont=dict(color=_AXIS, size=10),
                 tickvals=[20, 40, 60, 80, 100],
             ),
         ),
@@ -609,7 +609,7 @@ def plot_style_bars_interactive(
         f"{session_data.event_name} {session_data.year}  |  "
         f"Metryki stylu jazdy  |  {session_data.session_type}"
     )
-    _dark(fig, title=title, height=max(400, len(labels) * 40 + 120))
+    _dark(fig, title=title, height=max(550, len(labels) * 55 + 150))
 
     fig.update_layout(
         barmode="group",
@@ -700,7 +700,7 @@ def plot_driver_dominance_map_interactive(
         f"{session_data.event_name} {session_data.year}  |  "
         f"Dominacja na torze  |  {session_data.session_type}"
     )
-    _dark(fig, title=title, height=600)
+    _dark(fig, title=title, height=720)
     fig.update_layout(
         xaxis=dict(visible=False, scaleanchor="y", scaleratio=1),
         yaxis=dict(visible=False),
@@ -774,7 +774,7 @@ def plot_speed_heatmap_track_interactive(
         f"{driver_data.driver}  |  Mapa prędkości  |  "
         f"{session_data.event_name} {session_data.year} [{session_data.session_type}]"
     )
-    _dark(fig, title=title, height=500)
+    _dark(fig, title=title, height=650)
     fig.update_layout(
         xaxis=dict(visible=False, scaleanchor="y", scaleratio=1),
         yaxis=dict(visible=False),
@@ -844,7 +844,7 @@ def plot_gear_map_interactive(
         f"{driver_data.driver}  |  Mapa biegów  |  "
         f"{session_data.event_name} {session_data.year} [{session_data.session_type}]"
     )
-    _dark(fig, title=title, height=500)
+    _dark(fig, title=title, height=650)
     fig.update_layout(
         xaxis=dict(visible=False, scaleanchor="y", scaleratio=1),
         yaxis=dict(visible=False),
@@ -999,14 +999,14 @@ def plot_race_pace_interactive(
         f"{session_data.event_name} {session_data.year}  |  "
         f"Race Pace  |  {session_data.session_type}"
     )
-    _dark(fig, title=title, height=680)
+    _dark(fig, title=title, height=820)
     fig.update_layout(barmode="stack")
     fig.update_yaxes(**_axis("Czas [s]"),     row=1, col=1)
     fig.update_yaxes(visible=False,           row=2, col=1)
     fig.update_xaxes(**_axis("Okrążenie"),    row=2, col=1)
 
     for ann in fig.layout.annotations:
-        ann.font = dict(color="#AAAAAA", size=9, family="Courier New")
+        ann.font = dict(color="#AAAAAA", size=11, family="Courier New")
 
     return fig
 
@@ -1222,7 +1222,7 @@ def plot_track_animation_interactive(
         f"{session_data.event_name} {session_data.year}  |  "
         f"Animacja okrążenia  |  {session_data.session_type}"
     )
-    _dark(fig, title=title, height=680)
+    _dark(fig, title=title, height=820)
     fig.update_layout(
         xaxis=dict(visible=False, scaleanchor="y", scaleratio=1),
         yaxis=dict(visible=False),
