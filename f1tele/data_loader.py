@@ -5,20 +5,15 @@ Obsługuje pobieranie sesji, okrążeń i pełnych danych telemetrycznych.
 
 from __future__ import annotations
 
-import os
 import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
 import fastf1
-import fastf1.plotting
-import numpy as np
 import pandas as pd
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
-from rich.table import Table
-from rich import box
 
 warnings.filterwarnings("ignore")
 
@@ -139,7 +134,7 @@ def load_session(
 
         ff1_session = fastf1.get_session(year, round_number, session_type)
         progress.update(task, description="Pobieranie danych telemetrycznych...")
-        ff1_session.load(telemetry=True, weather=False, messages=False)
+        ff1_session.load(telemetry=True, weather=True, messages=False)
 
         event = ff1_session.event
         sd = SessionData(
@@ -279,42 +274,6 @@ def load_drivers_data(
     return results
 
 
-def print_lap_summary(drivers_data: dict[str, DriverLapData]) -> None:
-    """Wyświetla tabelę podsumowania okrążeń."""
-    table = Table(
-        title="[bold]Podsumowanie okrążeń[/bold]",
-        box=box.ROUNDED,
-        show_header=True,
-        header_style="bold magenta",
-    )
-    table.add_column("Kierowca", style="bold", width=10)
-    table.add_column("Czas okrążenia", justify="right", width=15)
-    table.add_column("S1", justify="right", width=9)
-    table.add_column("S2", justify="right", width=9)
-    table.add_column("S3", justify="right", width=9)
-    table.add_column("Okrążenie #", justify="center", width=11)
-    table.add_column("Opona", justify="center", width=8)
-
-    sorted_drivers = sorted(drivers_data.values(), key=lambda d: d.lap_time)
-    reference_time = sorted_drivers[0].lap_time if sorted_drivers else 0.0
-
-    for i, d in enumerate(sorted_drivers):
-        delta = d.lap_time - reference_time
-        delta_str = f"+{delta:.3f}" if delta > 0 else "POLE"
-        time_color = "green" if i == 0 else "white"
-
-        table.add_row(
-            f"[{d.color}]{d.driver}[/{d.color}]",
-            f"[{time_color}]{d.lap_time_str}[/{time_color}] ({delta_str})",
-            f"{d.sector1:.3f}s",
-            f"{d.sector2:.3f}s",
-            f"{d.sector3:.3f}s",
-            str(d.lap_number),
-            d.compound,
-        )
-
-    console.print(table)
-
 
 def get_available_sessions(year: int) -> pd.DataFrame:
     """Zwraca listę dostępnych sesji dla danego roku."""
@@ -323,6 +282,23 @@ def get_available_sessions(year: int) -> pd.DataFrame:
         return schedule[["RoundNumber", "EventName", "Location", "Country", "EventDate"]]
     except Exception as exc:
         console.print(f"[red]Błąd pobierania harmonogramu: {exc}[/red]")
+        return pd.DataFrame()
+
+
+def get_weather_data(session_data: "SessionData") -> pd.DataFrame:
+    """
+    Zwraca dane pogodowe dla załadowanej sesji.
+    Kolumny: Time, AirTemp, TrackTemp, Humidity, Pressure, WindSpeed, WindDirection, Rainfall.
+    """
+    try:
+        ff1 = session_data._session
+        if ff1 is None:
+            return pd.DataFrame()
+        wdf = ff1.weather_data
+        if wdf is None or (hasattr(wdf, "empty") and wdf.empty):
+            return pd.DataFrame()
+        return wdf.reset_index(drop=True)
+    except Exception:
         return pd.DataFrame()
 
 
@@ -352,6 +328,39 @@ def get_session_drivers_list(
         result.append({"abbr": str(abbr), "full_name": full_name, "team": team})
 
     return result
+
+
+def get_position_data(
+    session_data: SessionData,
+    drivers: list[str],
+) -> pd.DataFrame:
+    """
+    Pobiera dane pozycji okrążenie po okrążeniu dla każdego kierowcy.
+    Przydatne głównie dla sesji wyścigowych.
+    """
+    ff1 = session_data._session
+    rows: list[dict] = []
+
+    for drv in drivers:
+        try:
+            drv_laps = ff1.laps.pick_drivers(drv.upper())
+            if drv_laps.empty:
+                continue
+            color = get_driver_color(drv)
+            for _, lap in drv_laps.iterrows():
+                pos = lap.get("Position")
+                if pos is None or pd.isna(pos):
+                    continue
+                rows.append({
+                    "Driver":    drv.upper(),
+                    "LapNumber": int(lap["LapNumber"]),
+                    "Position":  int(pos),
+                    "Color":     color,
+                })
+        except Exception:
+            pass
+
+    return pd.DataFrame(rows) if rows else pd.DataFrame()
 
 
 def get_race_pace_data(

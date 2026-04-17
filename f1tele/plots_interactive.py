@@ -1230,3 +1230,606 @@ def plot_track_animation_interactive(
         margin=dict(l=30, r=30, t=70, b=140),
     )
     return fig
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 12. DANE POGODOWE
+# ══════════════════════════════════════════════════════════════════════════════
+def plot_weather_interactive(
+    weather_df: pd.DataFrame,
+    session_data: SessionData,
+) -> Optional[go.Figure]:
+    """Dane pogodowe sesji: temperatury powietrza/toru, wiatr, wilgotność, opady."""
+    if weather_df is None or weather_df.empty:
+        return None
+
+    if "Time" in weather_df.columns:
+        mins = weather_df["Time"].dt.total_seconds() / 60
+    else:
+        mins = np.arange(len(weather_df))
+
+    fig = make_subplots(
+        rows=3, cols=1,
+        shared_xaxes=True,
+        vertical_spacing=0.06,
+        subplot_titles=["Temperatura [°C]", "Wiatr [m/s]  &  Wilgotność [%]", "Opady"],
+    )
+
+    if "AirTemp" in weather_df.columns:
+        fig.add_trace(go.Scatter(
+            x=mins, y=weather_df["AirTemp"],
+            name="Powietrze [°C]", line=dict(color="#4da6ff", width=2.2),
+            hovertemplate="Powietrze: %{y:.1f}°C<extra></extra>",
+        ), row=1, col=1)
+
+    if "TrackTemp" in weather_df.columns:
+        fig.add_trace(go.Scatter(
+            x=mins, y=weather_df["TrackTemp"],
+            name="Tor [°C]", line=dict(color="#ff7c4d", width=2.2),
+            hovertemplate="Tor: %{y:.1f}°C<extra></extra>",
+        ), row=1, col=1)
+
+    if "WindSpeed" in weather_df.columns:
+        fig.add_trace(go.Scatter(
+            x=mins, y=weather_df["WindSpeed"],
+            name="Wiatr [m/s]", line=dict(color="#c8ff3d", width=1.8),
+            hovertemplate="Wiatr: %{y:.1f} m/s<extra></extra>",
+        ), row=2, col=1)
+
+    if "Humidity" in weather_df.columns:
+        fig.add_trace(go.Scatter(
+            x=mins, y=weather_df["Humidity"],
+            name="Wilgotność [%]", line=dict(color="#a78bfa", width=1.8, dash="dot"),
+            hovertemplate="Wilgotność: %{y:.1f}%<extra></extra>",
+        ), row=2, col=1)
+
+    if "Rainfall" in weather_df.columns:
+        rain = pd.to_numeric(weather_df["Rainfall"], errors="coerce").fillna(0).astype(float)
+        fig.add_trace(go.Bar(
+            x=mins, y=rain,
+            name="Opady", marker_color="#00d4ff", opacity=0.8,
+            hovertemplate="Opady: %{y}<extra></extra>",
+        ), row=3, col=1)
+
+    title = (
+        f"{session_data.event_name} {session_data.year}  |  "
+        f"Warunki pogodowe  |  {session_data.session_type}"
+    )
+    _dark(fig, title=title, height=650)
+    fig.update_yaxes(**_axis("Temp [°C]"),     row=1, col=1)
+    fig.update_yaxes(**_axis("Wiatr / Wilg."), row=2, col=1)
+    fig.update_yaxes(**_axis("Opady"),          row=3, col=1)
+    fig.update_xaxes(**_axis("Czas [min]"),     row=3, col=1)
+
+    for ann in fig.layout.annotations:
+        ann.font = dict(color="#AAAAAA", size=11, family="Courier New")
+
+    return fig
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 13. DEGRADACJA OPON
+# ══════════════════════════════════════════════════════════════════════════════
+def plot_tire_degradation_interactive(
+    race_pace_df: pd.DataFrame,
+    drivers_data: dict[str, DriverLapData],
+    session_data: SessionData,
+) -> go.Figure:
+    """Degradacja opon per stint — czas okrążenia vs numer okrążenia z regresją liniową."""
+    if race_pace_df is None or race_pace_df.empty:
+        return go.Figure()
+
+    fig = go.Figure()
+
+    for drv in race_pace_df["Driver"].unique():
+        drv_df = race_pace_df[race_pace_df["Driver"] == drv].sort_values("LapNumber").copy()
+        if drv_df.empty:
+            continue
+        color = drv_df["Color"].iloc[0]
+
+        # Wykryj stinty przez zmianę składu opony
+        stint_ids, stint_n, prev = [], 1, drv_df["Compound"].iloc[0]
+        for compound in drv_df["Compound"]:
+            if compound != prev:
+                stint_n += 1
+                prev = compound
+            stint_ids.append(stint_n)
+        drv_df["Stint"] = stint_ids
+
+        for s_num, s_df in drv_df.groupby("Stint"):
+            if len(s_df) < 2:
+                continue
+            compound  = s_df["Compound"].iloc[0]
+            laps      = s_df["LapNumber"].values
+            times     = s_df["LapTime_s"].values
+            laps_norm = laps - laps[0]
+            coeffs    = np.polyfit(laps_norm, times, 1)
+            trend     = np.poly1d(coeffs)(laps_norm)
+            deg_rate  = coeffs[0]
+            label     = f"{drv}  Stint {s_num}  ({compound})  {deg_rate:+.3f} s/lap"
+
+            fig.add_trace(go.Scatter(
+                x=laps, y=times,
+                mode="markers",
+                marker=dict(color=color, size=8, opacity=0.65),
+                name=label, legendgroup=f"{drv}_{s_num}",
+                showlegend=True,
+                hovertemplate=(
+                    f"<b>{drv}  Stint {s_num}</b><br>"
+                    "Okrążenie: %{x}<br>Czas: %{y:.3f} s<extra></extra>"
+                ),
+            ))
+            fig.add_trace(go.Scatter(
+                x=laps, y=trend,
+                mode="lines",
+                line=dict(color=color, width=2.2, dash="dot"),
+                legendgroup=f"{drv}_{s_num}", showlegend=False,
+                hovertemplate=f"Trend ({deg_rate:+.4f} s/lap): %{{y:.3f}}s<extra></extra>",
+            ))
+
+    title = (
+        f"{session_data.event_name} {session_data.year}  |  "
+        f"Degradacja opon  |  {session_data.session_type}"
+    )
+    _dark(fig, title=title, height=700)
+    fig.update_yaxes(**_axis("Czas okrążenia [s]"))
+    fig.update_xaxes(**_axis("Okrążenie"))
+    for ann in fig.layout.annotations:
+        ann.font = dict(color="#AAAAAA", size=11, family="Courier New")
+
+    return fig
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 14. SEKTORY  PURPLE / GREEN / YELLOW
+# ══════════════════════════════════════════════════════════════════════════════
+def plot_sector_colors_interactive(
+    drivers_data: dict[str, DriverLapData],
+    session_data: SessionData,
+) -> go.Figure:
+    """
+    Kolorowanie sektorów jak w F1 TV:
+    🟣 Fioletowy = najlepszy w polu  |  🟢 Zielony ≤ +0.3 s  |  🟡 Żółty = wolniejszy.
+    """
+    if not drivers_data:
+        return go.Figure()
+
+    sector_fields = {"S1": "sector1", "S2": "sector2", "S3": "sector3"}
+
+    best_sector: dict[str, float] = {}
+    for sec, field in sector_fields.items():
+        times = [getattr(d, field) for d in drivers_data.values() if getattr(d, field) > 0]
+        best_sector[sec] = min(times) if times else 0.0
+
+    fig = go.Figure()
+
+    for drv in drivers_data:
+        d = drivers_data[drv]
+        bar_colors, bar_texts, bar_vals, bar_secs = [], [], [], []
+
+        for sec, field in sector_fields.items():
+            val = getattr(d, field)
+            if val <= 0:
+                continue
+            gap = val - best_sector[sec]
+
+            if abs(gap) < 0.001:
+                cell_color, extra = "#CC00FF", " ⬡"
+            elif gap <= 0.300:
+                cell_color, extra = "#00C853", ""
+            else:
+                cell_color, extra = "#FFD600", ""
+
+            bar_colors.append(cell_color)
+            bar_texts.append(f"{val:.3f}s{extra}<br>+{gap:.3f}")
+            bar_vals.append(val)
+            bar_secs.append(sec)
+
+        fig.add_trace(go.Bar(
+            x=bar_secs,
+            y=bar_vals,
+            name=drv,
+            marker_color=bar_colors,
+            text=bar_texts,
+            textposition="inside",
+            textfont=dict(color="#FFFFFF", size=12, family="Courier New"),
+            legendgroup=drv,
+            offsetgroup=drv,
+            hovertemplate=(
+                f"<b>{drv}</b><br>"
+                "Sektor: %{x}<br>Czas: %{y:.3f} s<extra></extra>"
+            ),
+        ))
+
+    title = (
+        f"{session_data.event_name} {session_data.year}  |  "
+        f"Sektory  🟣 Purple / 🟢 Green / 🟡 Yellow  |  {session_data.session_type}"
+    )
+    fig.update_layout(barmode="group")
+    _dark(fig, title=title, height=550)
+    fig.update_yaxes(**_axis("Czas [s]"))
+    fig.update_xaxes(**_axis("Sektor"))
+    for ann in fig.layout.annotations:
+        ann.font = dict(color="#AAAAAA", size=11, family="Courier New")
+
+    return fig
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 16. DELTA CZASU — dedykowany wykres
+# ══════════════════════════════════════════════════════════════════════════════
+def plot_delta_time_interactive(
+    drivers_data: dict[str, DriverLapData],
+    session_data: SessionData,
+    corner_analysis=None,
+) -> Optional[go.Figure]:
+    """Delta czasu po dystansie względem najszybszego kierowcy, z adnotacjami zakrętów."""
+    if len(drivers_data) < 2:
+        return None
+
+    common = _common_d(drivers_data)
+    ref    = min(drivers_data.values(), key=lambda d: d.lap_time)
+    step   = np.diff(common, prepend=common[0])
+
+    ref_spd = _interp(ref.telemetry, "Speed", common)
+    ref_dt  = np.where(ref_spd > 1, step / (ref_spd / 3.6), 0)
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        x=common, y=np.zeros_like(common),
+        name=f"{ref.driver}  {ref.lap_time_str}  (ref)",
+        line=dict(color=ref.color, width=1.5, dash="dot"),
+        hoverinfo="skip",
+    ))
+
+    for drv, data in drivers_data.items():
+        if drv == ref.driver:
+            continue
+        spd   = _interp(data.telemetry, "Speed", common)
+        dt    = np.where(spd > 1, step / (spd / 3.6), 0)
+        delta = np.cumsum(dt - ref_dt)
+
+        fig.add_trace(go.Scatter(
+            x=common, y=delta,
+            name=f"{drv}  {data.lap_time_str}",
+            line=dict(color=data.color, width=2.2),
+            fill="tozeroy",
+            fillcolor=_rgba(data.color, 0.10),
+            hovertemplate=(
+                f"<b>{drv} vs {ref.driver}</b><br>"
+                "Dystans: %{x:.0f} m<br>"
+                "Δt: %{y:+.3f} s<br>"
+                "<i>+ = wolniej, − = szybciej od ref</i><extra></extra>"
+            ),
+        ))
+
+    if corner_analysis and corner_analysis.corners:
+        for c in corner_analysis.corners:
+            fig.add_vline(x=c["distance"], line=dict(color="#383838", width=1))
+            fig.add_annotation(
+                x=c["distance"], xanchor="center",
+                y=1.0, yref="paper", yanchor="bottom",
+                text=f"T{c['id']}", showarrow=False,
+                font=dict(color="#666666", size=9, family="Courier New"),
+            )
+
+    title = (
+        f"{session_data.event_name} {session_data.year}  |  "
+        f"Delta czasu  |  {session_data.session_type}"
+    )
+    _dark(fig, title=title, height=480)
+    fig.update_layout(
+        hovermode="x unified",
+        yaxis=dict(
+            **_axis("Δt [s]  (+ wolniej od ref)"),
+            zeroline=True, zerolinecolor="#555555", zerolinewidth=1,
+        ),
+        xaxis=dict(**_axis("Dystans [m]")),
+    )
+    return fig
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 17. PUNKTY HAMOWANIA PER ZAKRĘT
+# ══════════════════════════════════════════════════════════════════════════════
+def plot_braking_points_interactive(
+    drivers_data: dict[str, DriverLapData],
+    corner_analysis,
+    session_data: SessionData,
+) -> Optional[go.Figure]:
+    """
+    Scatter punktów hamowania per zakręt:
+      góra — absolutna pozycja na torze gdzie kierowca zaczyna hamować [m]
+              (wyżej = późniejsze hamowanie = agresywniej)
+      dół  — maksymalne ciśnienie hamulca [%]
+    """
+    if corner_analysis is None or not corner_analysis.corners:
+        return None
+
+    corners  = corner_analysis.corners[:16]
+    c_labels = [f"T{c['id']}" for c in corners]
+    drivers  = list(drivers_data.keys())
+
+    fig = make_subplots(
+        rows=2, cols=1,
+        shared_xaxes=True,
+        vertical_spacing=0.10,
+        subplot_titles=[
+            "Punkt hamowania — pozycja na torze [m]  (wyżej = późniejsze hamowanie)",
+            "Maksymalne ciśnienie hamulca [%]",
+        ],
+    )
+
+    for drv in drivers:
+        color  = drivers_data[drv].color
+        ev_map = {e.corner_id: e for e in corner_analysis.driver_corners.get(drv, [])}
+
+        braking_pts, max_brakes = [], []
+        for c in corners:
+            ev = ev_map.get(c["id"])
+            braking_pts.append(ev.braking_point     if ev else None)
+            max_brakes.append(ev.max_brake_pressure if ev else None)
+
+        scatter_kw = dict(
+            x=c_labels, name=drv, legendgroup=drv,
+            mode="markers+lines",
+            marker=dict(color=color, size=11, line=dict(color="#222222", width=1)),
+            line=dict(color=color, width=1.4, dash="dot"),
+        )
+
+        fig.add_trace(go.Scatter(
+            **scatter_kw, y=braking_pts, showlegend=True,
+            hovertemplate=(
+                f"<b>{drv}</b><br>Zakręt: %{{x}}<br>"
+                "Hamowanie od: %{y:.0f} m<extra></extra>"
+            ),
+        ), row=1, col=1)
+
+        fig.add_trace(go.Scatter(
+            **scatter_kw, y=max_brakes, showlegend=False,
+            hovertemplate=(
+                f"<b>{drv}</b><br>Zakręt: %{{x}}<br>"
+                "Maks. hamulec: %{y:.1f}%<extra></extra>"
+            ),
+        ), row=2, col=1)
+
+    title = (
+        f"{session_data.event_name} {session_data.year}  |  "
+        f"Analiza punktów hamowania  |  {session_data.session_type}"
+    )
+    _dark(fig, title=title, height=720)
+    fig.update_yaxes(**_axis("Pozycja [m]"),   row=1, col=1)
+    fig.update_yaxes(**_axis("Ciśnienie [%]"), row=2, col=1)
+    fig.update_xaxes(**_axis("Zakręt"),         row=2, col=1)
+
+    for ann in fig.layout.annotations:
+        ann.font = dict(color="#AAAAAA", size=11, family="Courier New")
+
+    return fig
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 18. POZYCJE W WYŚCIGU
+# ══════════════════════════════════════════════════════════════════════════════
+def plot_position_interactive(
+    position_df: pd.DataFrame,
+    drivers_data: dict[str, DriverLapData],
+    session_data: SessionData,
+) -> Optional[go.Figure]:
+    """Pozycja kierowcy okrążenie po okrążeniu (oś Y odwrócona — P1 na górze)."""
+    if position_df is None or position_df.empty:
+        return None
+
+    fig = go.Figure()
+
+    for drv in position_df["Driver"].unique():
+        drv_df = position_df[position_df["Driver"] == drv].sort_values("LapNumber")
+        if drv_df.empty:
+            continue
+        color = drv_df["Color"].iloc[0]
+
+        fig.add_trace(go.Scatter(
+            x=drv_df["LapNumber"],
+            y=drv_df["Position"],
+            name=drv,
+            line=dict(color=color, width=2.2),
+            mode="lines",
+            hovertemplate=(
+                f"<b>{drv}</b><br>"
+                "Okrążenie: %{x}<br>"
+                "Pozycja: P%{y}<extra></extra>"
+            ),
+        ))
+
+    title = (
+        f"{session_data.event_name} {session_data.year}  |  "
+        f"Pozycje w wyścigu  |  {session_data.session_type}"
+    )
+    _dark(fig, title=title, height=580)
+    fig.update_layout(
+        yaxis=dict(
+            **_axis("Pozycja"),
+            autorange="reversed",
+            tickvals=list(range(1, 21)),
+            dtick=1,
+        ),
+        xaxis=dict(**_axis("Okrążenie")),
+    )
+    return fig
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 19. PODZIAŁ NA STINTY (GANTT)
+# ══════════════════════════════════════════════════════════════════════════════
+def plot_stint_overview_interactive(
+    race_pace_df: pd.DataFrame,
+    drivers_data: dict[str, DriverLapData],
+    session_data: SessionData,
+) -> Optional[go.Figure]:
+    """Podział na stinty: poziome paski per kierowca, kolorowane składem opony."""
+    if race_pace_df is None or race_pace_df.empty:
+        return None
+
+    drivers = sorted(race_pace_df["Driver"].unique())
+    fig     = go.Figure()
+    added_compounds: set[str] = set()
+
+    for drv in drivers:
+        drv_df = race_pace_df[race_pace_df["Driver"] == drv].sort_values("LapNumber").copy()
+        if drv_df.empty:
+            continue
+
+        drv_df["_new"] = drv_df["Compound"] != drv_df["Compound"].shift()
+        drv_df["_sid"] = drv_df["_new"].cumsum()
+
+        for _, stint_df in drv_df.groupby("_sid"):
+            compound  = str(stint_df["Compound"].iloc[0])
+            lap_start = int(stint_df["LapNumber"].min())
+            lap_end   = int(stint_df["LapNumber"].max())
+            n_laps    = lap_end - lap_start + 1
+            c_color   = _COMPOUND_COLOR.get(compound, "#888888")
+            txt_color = "#000000" if compound in ("MEDIUM", "HARD", "INTERMEDIATE") else "#FFFFFF"
+
+            fig.add_trace(go.Bar(
+                x=[n_laps],
+                y=[drv],
+                base=lap_start - 1,
+                orientation="h",
+                marker_color=c_color,
+                marker_line_color=_BG,
+                marker_line_width=2,
+                name=compound,
+                legendgroup=f"cpd_{compound}",
+                showlegend=compound not in added_compounds,
+                text=compound[:1] if n_laps >= 3 else "",
+                textposition="inside",
+                textfont=dict(color=txt_color, size=10, family="Courier New"),
+                hovertemplate=(
+                    f"<b>{drv}</b>  {compound}<br>"
+                    f"Okrążenia: {lap_start}–{lap_end}  ({n_laps} kółek)<extra></extra>"
+                ),
+            ))
+            added_compounds.add(compound)
+
+    title = (
+        f"{session_data.event_name} {session_data.year}  |  "
+        f"Podział na stinty  |  {session_data.session_type}"
+    )
+    _dark(fig, title=title, height=max(350, len(drivers) * 55 + 160))
+    fig.update_layout(
+        barmode="stack",
+        xaxis=dict(**_axis("Numer okrążenia")),
+        yaxis=dict(
+            **_axis("Kierowca"),
+            categoryorder="array",
+            categoryarray=drivers[::-1],
+        ),
+    )
+    return fig
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 15. ANALIZA DRS
+# ══════════════════════════════════════════════════════════════════════════════
+def plot_drs_interactive(
+    drivers_data: dict[str, DriverLapData],
+    session_data: SessionData,
+) -> Optional[go.Figure]:
+    """Analiza DRS: strefy aktywacji na mapie toru + rozkład prędkości DRS on vs off."""
+    any_drs = any(
+        "DRS" in d.telemetry.columns and d.telemetry["DRS"].max() > 0
+        for d in drivers_data.values()
+    )
+    if not any_drs:
+        return None
+
+    has_gps = any(
+        "X" in d.telemetry.columns and "Y" in d.telemetry.columns
+        for d in drivers_data.values()
+    )
+
+    if has_gps:
+        fig = make_subplots(
+            rows=1, cols=2,
+            column_widths=[0.55, 0.45],
+            subplot_titles=["Strefy DRS na torze", "Prędkość  DRS on vs off [km/h]"],
+            specs=[[{"type": "scatter"}, {"type": "scatter"}]],
+        )
+        col_map, col_spd = 1, 2
+    else:
+        fig = make_subplots(
+            rows=1, cols=1,
+            subplot_titles=["Prędkość  DRS on vs off [km/h]"],
+        )
+        col_map, col_spd = None, 1
+
+    for drv, data in drivers_data.items():
+        telem    = data.telemetry
+        if "DRS" not in telem.columns:
+            continue
+        drs_open = telem["DRS"] >= 10
+
+        if has_gps and col_map and "X" in telem.columns:
+            x_all, y_all = telem["X"].values, telem["Y"].values
+
+            fig.add_trace(go.Scatter(
+                x=x_all, y=y_all, mode="markers",
+                marker=dict(color="#1A1A1A", size=9),
+                showlegend=False, hoverinfo="skip",
+            ), row=1, col=col_map)
+
+            mask_off = ~drs_open.values
+            if mask_off.any():
+                fig.add_trace(go.Scatter(
+                    x=x_all[mask_off], y=y_all[mask_off], mode="markers",
+                    marker=dict(color=data.color, size=4, opacity=0.3),
+                    name=f"{drv} DRS off", legendgroup=drv, showlegend=False,
+                    hoverinfo="skip",
+                ), row=1, col=col_map)
+
+            mask_on = drs_open.values
+            if mask_on.any():
+                fig.add_trace(go.Scatter(
+                    x=x_all[mask_on], y=y_all[mask_on], mode="markers",
+                    marker=dict(color="#00FF88", size=7, opacity=0.95),
+                    name=f"{drv}  DRS ✓",
+                    legendgroup=drv, showlegend=True,
+                    hovertemplate=(
+                        f"<b>{drv}</b> DRS aktywny<br>"
+                        "V: %{customdata:.0f} km/h<extra></extra>"
+                    ),
+                    customdata=telem.loc[mask_on, "Speed"].values,
+                ), row=1, col=col_map)
+
+        spd_on  = telem.loc[drs_open,  "Speed"].values if drs_open.any()  else np.array([])
+        spd_off = telem.loc[~drs_open, "Speed"].values if (~drs_open).any() else np.array([])
+
+        for label, spd, alpha in [("on", spd_on, 0.35), ("off", spd_off, 0.12)]:
+            if len(spd) < 5:
+                continue
+            fig.add_trace(go.Violin(
+                y=spd, name=f"{drv}  DRS {label}",
+                line_color=data.color,
+                fillcolor=_rgba(data.color, alpha),
+                box_visible=True, meanline_visible=True,
+                legendgroup=drv, showlegend=False,
+                hovertemplate=f"<b>{drv} DRS {label}</b><br>V: %{{y:.0f}} km/h<extra></extra>",
+                x0=f"{drv} {label}",
+            ), row=1, col=col_spd)
+
+    if has_gps and col_map:
+        fig.update_xaxes(visible=False, scaleanchor="y", scaleratio=1, row=1, col=col_map)
+        fig.update_yaxes(visible=False, row=1, col=col_map)
+
+    fig.update_yaxes(**_axis("V [km/h]"), row=1, col=col_spd)
+
+    title = (
+        f"{session_data.event_name} {session_data.year}  |  "
+        f"Analiza DRS  |  {session_data.session_type}"
+    )
+    _dark(fig, title=title, height=680)
+    for ann in fig.layout.annotations:
+        ann.font = dict(color="#AAAAAA", size=11, family="Courier New")
+
+    return fig
