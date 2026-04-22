@@ -8,7 +8,7 @@ def render_welcome() -> None:
     <div class="welcome fade-in">
         <div class="welcome-title">Witaj w F1 Telemetria</div>
         <div class="welcome-sub">
-            Wybierz sesję i kierowców w panelu po lewej, następnie kliknij
+            Wybierz sesję i kierowców w panelu powyżej, następnie kliknij
             <span class="accent">URUCHOM ANALIZĘ</span>.
         </div>
     </div>

@@ -10,7 +10,7 @@ st.set_page_config(
     page_title="F1 Telemetria",
     page_icon="🏎",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
     menu_items={
         "Get Help": None,
         "Report a bug": None,
@@ -18,8 +18,14 @@ st.set_page_config(
     },
 )
 
-from ui.styles import CSS
-st.markdown(CSS, unsafe_allow_html=True)
+# ── Motyw ─────────────────────────────────────────────────────────────────────
+if "theme" not in st.session_state:
+    st.session_state["theme"] = "dark"
+
+theme = st.session_state["theme"]
+
+from ui.styles import get_css
+st.markdown(get_css(theme), unsafe_allow_html=True)
 
 from ui.sidebar import render_sidebar
 from ui.welcome import render_welcome
@@ -102,18 +108,28 @@ def _import_modules():
     }
 
 
-st.markdown("""
-<div class="hero fade-in">
-    <div class="hero-stripe"></div>
-    <div class="hero-icon">🏎</div>
-    <div class="hero-text">
-        <div class="hero-title">F1 Telemetria</div>
-        <div class="hero-sub">Analiza stylu jazdy kierowców &nbsp;·&nbsp; FastF1</div>
+# ── Hero + przełącznik motywu ─────────────────────────────────────────────────
+hero_col, theme_col = st.columns([11, 1])
+with hero_col:
+    st.markdown("""
+    <div class="hero fade-in">
+        <div class="hero-stripe"></div>
+        <div class="hero-icon">🏎</div>
+        <div class="hero-text">
+            <div class="hero-title">F1 Telemetria</div>
+            <div class="hero-sub">Analiza stylu jazdy kierowców &nbsp;·&nbsp; FastF1</div>
+        </div>
+        <div class="hero-tag">Live analytics</div>
     </div>
-    <div class="hero-tag">Live analytics</div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
+with theme_col:
+    st.markdown("<div style='margin-top:8px'></div>", unsafe_allow_html=True)
+    _icon = "☀️ Jasny" if theme == "dark" else "🌙 Ciemny"
+    if st.button(_icon, help="Zmień motyw (jasny / ciemny)", use_container_width=True):
+        st.session_state["theme"] = "light" if theme == "dark" else "dark"
+        st.rerun()
 
+# ── Kontrolki ─────────────────────────────────────────────────────────────────
 sidebar = render_sidebar(_import_modules)
 
 if sidebar["custom_drivers"].strip():
