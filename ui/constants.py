@@ -1,17 +1,23 @@
-SESSIONS = ["Q", "R", "FP1", "FP2", "FP3", "S", "SS"]
+"""
+Stałe interfejsu.
 
-SESSION_LABELS: dict[str, str] = {
-    "Q":   "Kwalifikacje",
-    "R":   "Wyścig",
-    "FP1": "Trening 1",
-    "FP2": "Trening 2",
-    "FP3": "Trening 3",
-    "S":   "Sprint",
-    "SS":  "Sprint Shootout",
-}
+Nazwy sesji i kody kierowców pochodzą z `f1tele` — UI ich nie duplikuje,
+żeby nie rozjechały się z backendem.
+"""
 
-KNOWN_DRIVERS = [
-    "VER", "PER", "HAM", "RUS", "LEC", "SAI", "NOR", "PIA",
-    "ALO", "STR", "OCO", "GAS", "ALB", "SAR", "BOT", "ZHO",
-    "HUL", "MAG", "TSU", "LAW", "RIC", "BEA", "ANT", "DEV",
-]
+from __future__ import annotations
+
+from f1tele.config import MAX_ROUNDS_FALLBACK, SEASON_ROUNDS
+from f1tele.data_loader import DRIVER_COLORS, SESSION_LABELS, SESSION_TYPES
+
+SESSIONS = SESSION_TYPES
+
+# Zapasowa lista kierowców, zanim użytkownik pobierze skład z wybranej sesji.
+KNOWN_DRIVERS = sorted(DRIVER_COLORS)
+
+__all__ = ["SESSIONS", "SESSION_LABELS", "KNOWN_DRIVERS", "max_round_for_year"]
+
+
+def max_round_for_year(year: int) -> int:
+    """Liczba rund w sezonie; dla lat spoza słownika przyjmujemy wartość zapasową."""
+    return SEASON_ROUNDS.get(int(year), MAX_ROUNDS_FALLBACK)

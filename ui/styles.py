@@ -1,716 +1,648 @@
+"""
+Style dashboardu — jeden arkusz CSS budowany z tokenów motywu.
+
+Zasada: kolor niesie informację. Interfejs jest neutralny (tło, ramki, tekst),
+a nasycone barwy zostają dla danych — kolorów kierowców, składów opon i wykresów.
+Jedynym akcentem UI jest czerwień F1, używana oszczędnie: akcja główna,
+aktywna zakładka, wskaźnik sekcji.
+"""
+
 from __future__ import annotations
 
+# ── Tokeny motywów ───────────────────────────────────────────────────────────
+# Nazwy opisują rolę, nie kolor — dzięki temu oba motywy mają ten sam kontrakt.
 _DARK = dict(
-    bg0="#03040b", bg1="#060810", bg2="#090d18",
-    panel="#080b14", panel2="#0b0f1c",
-    border="#1a2840", border_soft="#101828",
-    text="#b8cde0", muted="#4e6070",
-    accent="#e10600", accent2="#c8ff3d", accent3="#00d4ff", accent4="#ff6b00",
-    glow="rgba(225,6,0,0.45)", glow_cyan="rgba(0,212,255,0.35)", glow_lime="rgba(200,255,61,0.3)",
+    bg="#0e1116",
+    surface="#161a21",
+    surface_2="#1b2028",
+    surface_3="#222833",
+    border="#262d38",
+    border_strong="#38414f",
+    text="#e6e9ee",
+    text_secondary="#a9b2be",
+    text_muted="#727c8a",
     heading="#ffffff",
-    grid="rgba(255,255,255,0.018)",
-    input_bg="rgba(8,11,20,0.95)", input_text="#ffffff",
-    panel_a="rgba(10,15,28,0.97)", panel_b="rgba(5,8,16,0.97)",
-    expander_bg="rgba(6,9,16,0.95)",
-    chip_bg="rgba(4,6,14,0.95)",
-    note_a="rgba(8,12,22,0.98)", note_b="rgba(4,7,14,0.98)",
-    hero_a="rgba(8,12,22,0.99)", hero_b="rgba(4,6,14,0.99)",
-    feature_a="rgba(10,15,26,0.98)", feature_b="rgba(5,8,16,0.98)",
-    results_a="rgba(10,15,26,0.99)", results_b="rgba(4,6,14,0.99)",
-    driver_a="rgba(10,15,26,0.98)", driver_b="rgba(5,8,16,0.98)",
-    tab_hover="rgba(225,6,0,0.06)", tab_active="rgba(225,6,0,0.07)",
-    badge_bg="rgba(0,212,255,0.08)", badge_border="rgba(0,212,255,0.3)",
-    ctrl_bg="rgba(6,9,18,0.97)", ctrl_border="#1a2840", ctrl_section="#00d4ff",
+    accent="#e10600",
+    accent_hover="#ff2a1f",
+    accent_soft="rgba(225,6,0,0.14)",
+    accent_text="#ff5c52",
+    success="#31c07a",
+    success_bg="rgba(49,192,122,0.10)",
+    warning="#e0a13a",
+    warning_bg="rgba(224,161,58,0.10)",
+    danger="#e5484d",
+    danger_bg="rgba(229,72,77,0.10)",
+    info_bg="rgba(120,150,200,0.08)",
+    shadow="0 1px 2px rgba(0,0,0,0.4)",
+    shadow_lg="0 4px 16px rgba(0,0,0,0.45)",
+    overlay="rgba(14,17,22,0.92)",
 )
 
 _LIGHT = dict(
-    bg0="#f0f2f8", bg1="#f4f6fb", bg2="#e8ecf5",
-    panel="#ffffff", panel2="#f8f9fd",
-    border="#c8d4e8", border_soft="#dde4f0",
-    text="#1a2540", muted="#6b7a9a",
-    accent="#e10600", accent2="#6a5c00", accent3="#0055cc", accent4="#cc4400",
-    glow="rgba(225,6,0,0.2)", glow_cyan="rgba(0,85,204,0.2)", glow_lime="rgba(100,80,0,0.1)",
-    heading="#0a0f20",
-    grid="rgba(0,0,0,0.02)",
-    input_bg="rgba(255,255,255,0.98)", input_text="#0a0f20",
-    panel_a="rgba(255,255,255,0.97)", panel_b="rgba(245,248,255,0.97)",
-    expander_bg="rgba(248,250,255,0.97)",
-    chip_bg="rgba(232,240,255,0.98)",
-    note_a="rgba(245,248,255,0.99)", note_b="rgba(235,241,255,0.99)",
-    hero_a="rgba(240,244,252,0.99)", hero_b="rgba(232,238,250,0.99)",
-    feature_a="rgba(255,255,255,0.98)", feature_b="rgba(245,248,255,0.98)",
-    results_a="rgba(250,252,255,0.99)", results_b="rgba(240,245,255,0.99)",
-    driver_a="rgba(255,255,255,0.98)", driver_b="rgba(245,248,255,0.98)",
-    tab_hover="rgba(225,6,0,0.04)", tab_active="rgba(225,6,0,0.05)",
-    badge_bg="rgba(0,85,204,0.08)", badge_border="rgba(0,85,204,0.3)",
-    ctrl_bg="rgba(255,255,255,0.97)", ctrl_border="#c8d4e8", ctrl_section="#0055cc",
+    bg="#f5f6f8",
+    surface="#ffffff",
+    surface_2="#f0f2f5",
+    surface_3="#e7eaef",
+    border="#dfe3e9",
+    border_strong="#c3cad4",
+    text="#161a20",
+    text_secondary="#4d5765",
+    text_muted="#79838f",
+    heading="#0b0e13",
+    accent="#d40500",
+    accent_hover="#ab0400",
+    accent_soft="rgba(212,5,0,0.09)",
+    accent_text="#c00400",
+    success="#177d4a",
+    success_bg="rgba(23,125,74,0.09)",
+    warning="#96631a",
+    warning_bg="rgba(150,99,26,0.10)",
+    danger="#c0272c",
+    danger_bg="rgba(192,39,44,0.09)",
+    info_bg="rgba(70,100,150,0.06)",
+    shadow="0 1px 2px rgba(16,24,40,0.06)",
+    shadow_lg="0 4px 16px rgba(16,24,40,0.10)",
+    overlay="rgba(245,246,248,0.94)",
 )
 
+THEMES = {"dark": _DARK, "light": _LIGHT}
+
+FONT_UI = "'Inter', -apple-system, 'Segoe UI', sans-serif"
+FONT_MONO = "'JetBrains Mono', 'Consolas', monospace"
 
 def get_css(theme: str = "dark") -> str:
-    c = _DARK if theme == "dark" else _LIGHT
+    """Zwraca kompletny arkusz stylów dla wybranego motywu."""
+    c = THEMES.get(theme, _DARK)
+    return f"<style>{_tokens(c)}{_BASE}{_LAYOUT}{_WIDGETS}{_COMPONENTS}</style>"
 
-    root = f"""<style>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+def _tokens(c: dict) -> str:
+    return f"""
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {{
-    --bg-0: {c['bg0']};
-    --bg-1: {c['bg1']};
-    --bg-2: {c['bg2']};
-    --panel: {c['panel']};
-    --panel-2: {c['panel2']};
+    --bg: {c['bg']};
+    --surface: {c['surface']};
+    --surface-2: {c['surface_2']};
+    --surface-3: {c['surface_3']};
     --border: {c['border']};
-    --border-soft: {c['border_soft']};
+    --border-strong: {c['border_strong']};
     --text: {c['text']};
-    --muted: {c['muted']};
-    --accent: {c['accent']};
-    --accent-2: {c['accent2']};
-    --accent-3: {c['accent3']};
-    --accent-4: {c['accent4']};
-    --glow: {c['glow']};
-    --glow-cyan: {c['glow_cyan']};
-    --glow-lime: {c['glow_lime']};
+    --text-2: {c['text_secondary']};
+    --muted: {c['text_muted']};
     --heading: {c['heading']};
-    --grid: {c['grid']};
-    --input-bg: {c['input_bg']};
-    --input-text: {c['input_text']};
-    --panel-a: {c['panel_a']};
-    --panel-b: {c['panel_b']};
-    --expander-bg: {c['expander_bg']};
-    --chip-bg: {c['chip_bg']};
-    --note-a: {c['note_a']};
-    --note-b: {c['note_b']};
-    --hero-a: {c['hero_a']};
-    --hero-b: {c['hero_b']};
-    --feature-a: {c['feature_a']};
-    --feature-b: {c['feature_b']};
-    --results-a: {c['results_a']};
-    --results-b: {c['results_b']};
-    --driver-a: {c['driver_a']};
-    --driver-b: {c['driver_b']};
-    --tab-hover: {c['tab_hover']};
-    --tab-active: {c['tab_active']};
-    --badge-bg: {c['badge_bg']};
-    --badge-border: {c['badge_border']};
-    --ctrl-bg: {c['ctrl_bg']};
-    --ctrl-border: {c['ctrl_border']};
-    --ctrl-section: {c['ctrl_section']};
+    --accent: {c['accent']};
+    --accent-hover: {c['accent_hover']};
+    --accent-soft: {c['accent_soft']};
+    --accent-text: {c['accent_text']};
+    --success: {c['success']};
+    --success-bg: {c['success_bg']};
+    --warning: {c['warning']};
+    --warning-bg: {c['warning_bg']};
+    --danger: {c['danger']};
+    --danger-bg: {c['danger_bg']};
+    --info-bg: {c['info_bg']};
+    --shadow: {c['shadow']};
+    --shadow-lg: {c['shadow_lg']};
+    --overlay: {c['overlay']};
+    --font-ui: {FONT_UI};
+    --font-mono: {FONT_MONO};
+    --radius: 8px;
+    --radius-sm: 6px;
 }}
 """
 
-    body = """
-/* ─── HIDE SIDEBAR ─── */
-section[data-testid="stSidebar"] { display: none !important; }
-[data-testid="collapsedControl"]  { display: none !important; }
 
-/* ─── BG ─── */
-.stApp {
-    background-color: var(--bg-0) !important;
-    background-image:
-        repeating-linear-gradient(45deg,  var(--grid) 0 1px, transparent 1px 16px),
-        repeating-linear-gradient(-45deg, var(--grid) 0 1px, transparent 1px 16px),
-        radial-gradient(ellipse 800px 500px at -5%  -8%,  var(--glow),      transparent 55%),
-        radial-gradient(ellipse 700px 450px at 108%  4%,  var(--glow-cyan), transparent 55%),
-        radial-gradient(ellipse 600px 400px at  50% 105%, var(--glow-lime),  transparent 60%);
-    background-attachment: fixed;
-}
+# ── Podstawy: tło, typografia, scrollbar ─────────────────────────────────────
+_BASE = """
+/* Tło malujemy na wszystkich warstwach Streamlita — gdy motyw dashboardu
+   różni się od motywu Streamlita, sam `.stApp` by nie wystarczył. */
+body,
+.stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"],
+[data-testid="stBottomBlockContainer"] { background: var(--bg) !important; }
 
-/* ─── TYPOGRAPHY ─── */
-html, body, [class*="css"] {
-    color: var(--text) !important;
-    font-family: 'Space Grotesk', sans-serif !important;
+html, body, [class*="css"], .stMarkdown, p, span, div, label, li {
+    font-family: var(--font-ui);
+    color: var(--text);
 }
-h1, h2, h3, h4, h5 {
+h1, h2, h3, h4, h5, h6 {
     color: var(--heading) !important;
-    font-family: 'Orbitron', sans-serif !important;
-    letter-spacing: 0.08em !important;
+    font-family: var(--font-ui) !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.01em !important;
 }
-[data-testid="stDataFrame"] *,
-pre, code, .stCodeBlock * {
-    font-family: 'JetBrains Mono', monospace !important;
+[data-testid="stDataFrame"] *, pre, code, .stCodeBlock * {
+    font-family: var(--font-mono) !important;
+}
+a { color: var(--accent-text) !important; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+    background: var(--border-strong);
+    border-radius: 6px;
+    border: 3px solid var(--bg);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+"""
+
+
+# ── Układ: pasek narzędzi, sidebar, szerokość treści ─────────────────────────
+_LAYOUT = """
+/* Nagłówek Streamlita to przezroczysty pasek wysokości 60 px, leżący NAD treścią
+   i przechwytujący kliknięcia. Wyłączamy mu zdarzenia myszy (poza własnym
+   paskiem narzędzi) i zaczynamy treść pod nim — inaczej górne przyciski
+   i zakładki nie dają się kliknąć. */
+[data-testid="stHeader"] {
+    background: transparent !important;
+    pointer-events: none;
+}
+[data-testid="stToolbar"], [data-testid="stHeader"] button {
+    pointer-events: auto;
+    right: 0.5rem;
 }
 
-/* ─── SCROLLBAR ─── */
-::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: var(--bg-0); }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: var(--accent-3); }
+.block-container {
+    padding-top: 4rem !important;
+    padding-bottom: 3rem !important;
+    max-width: 1500px;
+}
 
-/* ─── INPUTS ─── */
+/* ── Sidebar: panel sterowania ── */
+section[data-testid="stSidebar"] {
+    background: var(--surface) !important;
+    border-right: 1px solid var(--border);
+    width: 360px !important;
+}
+section[data-testid="stSidebar"] > div { padding-top: 0.6rem; }
+section[data-testid="stSidebar"] .block-container { padding-top: 1rem !important; }
+[data-testid="stSidebarCollapseButton"] button,
+[data-testid="stSidebarCollapsedControl"] button { color: var(--text-2) !important; }
+
+/* Etykiety pól są nośnikiem informacji — muszą być czytelne, nie ozdobne. */
+[data-testid="stWidgetLabel"] p,
+[data-testid="stWidgetLabel"] label {
+    color: var(--text-2) !important;
+    font-size: 0.8rem !important;
+    font-weight: 500 !important;
+}
+[data-testid="stCaptionContainer"], [data-testid="stCaptionContainer"] p {
+    color: var(--muted) !important;
+}
+
+/* ── Przyklejona listwa zakładek: nawigacja zostaje pod ręką ──
+   Streamlit zamyka listwę w kontenerze o dokładnie jej wysokości, więc sticky
+   nie miałby po czym jechać. Rozpuszczamy ten kontener (display: contents),
+   dzięki czemu listwa staje się dzieckiem całego bloku zakładek i może
+   przesuwać się wzdłuż jego wysokości. */
+[data-testid="stTabs"] > div > div:first-child { display: contents; }
+[data-testid="stTabs"] > div > div:first-child > [data-baseweb="tab-list"] {
+    position: sticky;
+    top: 3.75rem;   /* tuż pod nagłówkiem Streamlita (60 px) */
+    z-index: 60;
+    background: var(--overlay);
+    backdrop-filter: blur(8px);
+    padding-top: 0.4rem;
+}
+"""
+
+
+# ── Widgety Streamlita ───────────────────────────────────────────────────────
+_WIDGETS = """
+/* ── Pola tekstowe i liczbowe ── */
 [data-testid="stTextInput"] input,
 [data-testid="stNumberInput"] input,
-textarea {
-    background-color: var(--input-bg) !important;
+[data-testid="stTextArea"] textarea {
+    background: var(--surface-2) !important;
+    color: var(--text) !important;
     border: 1px solid var(--border) !important;
-    color: var(--input-text) !important;
-    border-radius: 4px !important;
-    font-family: 'JetBrains Mono', monospace !important;
-    font-size: 0.88rem !important;
-    transition: border-color 0.2s, box-shadow 0.2s !important;
+    border-radius: var(--radius-sm) !important;
+    font-family: var(--font-mono) !important;
+    font-size: 0.9rem !important;
 }
+[data-testid="stTextInput"] input::placeholder,
+[data-testid="stTextArea"] textarea::placeholder { color: var(--muted) !important; }
+
 [data-testid="stTextInput"] input:focus,
-[data-testid="stNumberInput"] input:focus {
-    border-color: var(--accent-3) !important;
-    box-shadow: 0 0 0 2px var(--glow-cyan), 0 0 12px var(--glow-cyan) !important;
-    outline: none !important;
-}
-[data-testid="stMultiSelect"] > div,
-[data-testid="stSelectbox"] > div > div {
-    background-color: var(--input-bg) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: 4px !important;
-    color: var(--input-text) !important;
-}
-
-/* ─── SLIDER ─── */
-[data-testid="stSlider"] [role="slider"] {
-    background-color: var(--accent-3) !important;
-    box-shadow: 0 0 14px var(--glow-cyan) !important;
-}
-[data-testid="stSlider"] > div > div > div > div:first-child {
-    background: linear-gradient(90deg, var(--accent), var(--accent-3)) !important;
-}
-
-/* ─── CHECKBOX ─── */
-[data-testid="stCheckbox"] label {
-    font-family: 'Space Grotesk', sans-serif !important;
-    font-weight: 500 !important;
-    font-size: 0.85rem !important;
-    color: var(--text) !important;
-}
-
-/* ─── BUTTONS ─── */
-.stButton > button {
-    background: transparent !important;
-    color: var(--text) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: 3px !important;
-    font-weight: 600 !important;
-    font-family: 'Orbitron', sans-serif !important;
-    letter-spacing: 0.12em !important;
-    font-size: 0.62rem !important;
-    text-transform: uppercase !important;
-    transition: all 0.2s ease !important;
-    padding: 0.55rem 1rem !important;
-}
-.stButton > button:hover {
-    color: var(--heading) !important;
+[data-testid="stNumberInput"] input:focus,
+[data-testid="stTextArea"] textarea:focus {
     border-color: var(--accent) !important;
-    box-shadow: 0 0 18px var(--glow), inset 0 0 12px var(--glow) !important;
-    transform: translateY(-1px) !important;
+    box-shadow: 0 0 0 3px var(--accent-soft) !important;
 }
-.stButton > button:active { transform: translateY(0) !important; }
+[data-testid="stNumberInput"] button {
+    background: var(--surface-3) !important;
+    border-color: var(--border) !important;
+    color: var(--text-2) !important;
+}
+
+/* ── Selectbox i multiselect ── */
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div,
+[data-testid="stMultiSelect"] div[data-baseweb="select"] > div {
+    background: var(--surface-2) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-sm) !important;
+    color: var(--text) !important;
+    min-height: 40px;
+}
+[data-testid="stSelectbox"] div[data-baseweb="select"] > div:hover,
+[data-testid="stMultiSelect"] div[data-baseweb="select"] > div:hover {
+    border-color: var(--border-strong) !important;
+}
+div[data-baseweb="popover"] li { font-family: var(--font-mono) !important; }
+
+/* Wybrani kierowcy jako żetony — czytelne, ale bez krzyku */
+[data-testid="stMultiSelect"] span[data-baseweb="tag"] {
+    background: var(--accent-soft) !important;
+    border: 1px solid var(--accent) !important;
+    color: var(--accent-text) !important;
+    border-radius: 5px !important;
+    font-family: var(--font-mono) !important;
+    font-weight: 600 !important;
+}
+[data-testid="stMultiSelect"] span[data-baseweb="tag"] span { color: var(--accent-text) !important; }
+
+/* ── Suwak ── */
+[data-testid="stSlider"] [role="slider"] { background: var(--accent) !important; }
+[data-testid="stSlider"] [data-baseweb="slider"] div[data-testid="stSliderTickBar"] { display: none; }
+[data-testid="stSlider"] [data-testid="stThumbValue"] {
+    color: var(--accent-text) !important;
+    font-family: var(--font-mono) !important;
+}
+
+/* ── Przyciski ── */
+.stButton > button, .stDownloadButton > button {
+    background: var(--surface-2) !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border-strong) !important;
+    border-radius: var(--radius-sm) !important;
+    font-family: var(--font-ui) !important;
+    font-weight: 500 !important;
+    font-size: 0.86rem !important;
+    padding: 0.45rem 0.9rem !important;
+    transition: background 0.12s ease, border-color 0.12s ease;
+}
+.stButton > button:hover, .stDownloadButton > button:hover {
+    background: var(--surface-3) !important;
+    border-color: var(--muted) !important;
+    color: var(--text) !important;
+}
+.stButton > button:focus:not(:active) { box-shadow: 0 0 0 3px var(--accent-soft) !important; }
+
 .stButton > button[kind="primary"] {
-    background: linear-gradient(135deg, #9a0400 0%, #e10600 55%, #ff4422 100%) !important;
+    background: var(--accent) !important;
+    border-color: var(--accent) !important;
     color: #ffffff !important;
-    border-color: #e10600 !important;
-    box-shadow: 0 0 22px rgba(225,6,0,0.5), 0 6px 24px rgba(0,0,0,0.3) !important;
+    font-weight: 600 !important;
+    padding: 0.6rem 1rem !important;
 }
 .stButton > button[kind="primary"]:hover {
-    box-shadow: 0 0 40px rgba(225,6,0,0.7), 0 8px 30px rgba(0,0,0,0.4) !important;
+    background: var(--accent-hover) !important;
+    border-color: var(--accent-hover) !important;
 }
 
-/* ─── TABS ─── */
+/* ── Zakładki ── */
 [data-testid="stTabs"] [role="tablist"] {
-    gap: 0 !important;
-    border-bottom: 1px solid var(--border) !important;
-    padding-bottom: 0 !important;
-    background: transparent !important;
+    gap: 0.15rem;
+    border-bottom: 1px solid var(--border);
 }
 [data-testid="stTabs"] button[role="tab"] {
     background: transparent !important;
-    border: none !important;
+    color: var(--text-2) !important;
+    font-family: var(--font-ui) !important;
+    font-size: 0.86rem !important;
+    font-weight: 500 !important;
+    padding: 0.6rem 0.85rem !important;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0 !important;
     border-bottom: 2px solid transparent !important;
-    border-radius: 0 !important;
-    color: var(--muted) !important;
-    font-weight: 600 !important;
-    font-family: 'Space Grotesk', sans-serif !important;
-    letter-spacing: 0.06em !important;
-    font-size: 0.74rem !important;
-    padding: 10px 14px !important;
-    transition: color 0.15s, border-color 0.15s, background 0.15s !important;
-    text-transform: uppercase !important;
 }
 [data-testid="stTabs"] button[role="tab"]:hover {
-    color: var(--heading) !important;
-    background: var(--tab-hover) !important;
-    border-bottom-color: rgba(225,6,0,0.4) !important;
-}
-[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
-    color: var(--accent) !important;
-    border-bottom-color: var(--accent) !important;
-    background: var(--tab-active) !important;
-    text-shadow: 0 0 12px var(--glow) !important;
-}
-
-/* ─── METRIC CARDS ─── */
-[data-testid="stMetric"] {
-    background: linear-gradient(160deg, var(--panel-a), var(--panel-b)) !important;
-    border: 1px solid var(--border) !important;
-    border-top: none !important;
-    border-radius: 4px !important;
-    padding: 16px 20px !important;
-    position: relative !important;
-    overflow: hidden !important;
-}
-[data-testid="stMetric"]::before {
-    content: "" !important;
-    position: absolute !important;
-    top: 0; left: 0; right: 0 !important;
-    height: 2px !important;
-    background: linear-gradient(90deg, var(--accent), var(--accent-3)) !important;
-    box-shadow: 0 0 10px var(--glow), 0 0 22px var(--glow-cyan) !important;
-}
-[data-testid="stMetric"]::after {
-    content: "" !important;
-    position: absolute !important;
-    bottom: 0; right: 0 !important;
-    width: 36px; height: 36px !important;
-    border-right: 1px solid var(--badge-border) !important;
-    border-bottom: 1px solid var(--badge-border) !important;
-}
-[data-testid="stMetricValue"] {
-    color: var(--heading) !important;
-    font-size: 1.45rem !important;
-    font-family: 'Orbitron', monospace !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.04em !important;
-}
-[data-testid="stMetricLabel"] {
-    color: var(--accent-3) !important;
-    font-size: 0.58rem !important;
-    letter-spacing: 0.22em !important;
-    text-transform: uppercase !important;
-    font-family: 'Orbitron', sans-serif !important;
-}
-[data-testid="stMetricDelta"] {
-    font-family: 'JetBrains Mono', monospace !important;
-    font-size: 0.74rem !important;
-}
-[data-testid="stMetricDelta"] svg { display: none; }
-
-/* ─── DATAFRAME ─── */
-[data-testid="stDataFrame"] {
-    border: 1px solid var(--border) !important;
-    border-radius: 4px !important;
-    overflow: hidden !important;
-}
-
-/* ─── PROGRESS ─── */
-[data-testid="stProgress"] > div > div {
-    background: linear-gradient(90deg, var(--accent), var(--accent-4), var(--accent-3)) !important;
-    border-radius: 2px !important;
-    box-shadow: 0 0 10px var(--glow), 0 0 20px var(--glow-cyan) !important;
-    transition: width 0.3s ease !important;
-}
-
-/* ─── ALERTS ─── */
-[data-testid="stAlert"] { border-radius: 4px !important; border-left-width: 3px !important; }
-.stSuccess { background-color: rgba(0,12,8,0.95) !important; border-color: #00ff9d !important; }
-.stWarning { background-color: rgba(18,12,0,0.95) !important; border-color: var(--accent-2) !important; }
-.stError   { background-color: rgba(18,2,2,0.95) !important; border-color: var(--accent) !important; }
-
-/* ─── EXPANDER ─── */
-[data-testid="stExpander"] {
-    background-color: var(--expander-bg) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: 4px !important;
-}
-[data-testid="stExpander"] summary {
-    font-family: 'Space Grotesk', sans-serif !important;
-    font-weight: 600 !important;
-    font-size: 0.84rem !important;
-    letter-spacing: 0.04em !important;
+    background: var(--surface-2) !important;
     color: var(--text) !important;
 }
+[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
+    color: var(--text) !important;
+    font-weight: 600 !important;
+    border-bottom-color: var(--accent) !important;
+}
+[data-testid="stTabs"] [data-baseweb="tab-highlight"] { display: none !important; }
 
-/* ─── MISC ─── */
-[data-testid="stSpinner"] { color: var(--accent-3) !important; }
-hr { border-color: var(--border) !important; margin: 16px 0 !important; }
-
-/* ─── PLOTLY MODEBAR ─── */
-.js-plotly-plot .plotly .modebar { background: transparent !important; }
-.js-plotly-plot .plotly .modebar-btn path { fill: var(--muted) !important; }
-.js-plotly-plot .plotly .modebar-btn:hover path { fill: var(--accent-3) !important; }
-
-
-/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   CONTROLS PANEL (replaces sidebar)
-   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-
-.ctrl-panel {
-    background: var(--ctrl-bg);
-    border: 1px solid var(--ctrl-border);
-    border-radius: 6px;
-    padding: 20px 24px 16px;
-    margin-bottom: 24px;
-    position: relative;
+/* ── Tabele ── */
+[data-testid="stDataFrame"] {
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius) !important;
     overflow: hidden;
 }
-.ctrl-panel::before {
-    content: "";
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, var(--accent), var(--accent-4), var(--accent-3), var(--accent-2));
-    box-shadow: 0 0 14px var(--glow);
-}
 
-.ctrl-section {
-    color: var(--ctrl-section);
-    font-size: 0.56rem;
-    font-weight: 700;
-    letter-spacing: 0.28em;
-    text-transform: uppercase;
-    padding: 7px 0 9px;
+/* ── Komunikaty ── */
+[data-testid="stAlert"] {
+    border-radius: var(--radius-sm) !important;
+    border: 1px solid var(--border) !important;
+    border-left-width: 3px !important;
+}
+/* Streamlit koloruje tekst komunikatów pod własny motyw — wymuszamy nasz,
+   inaczej w ciemnym motywie zielone „gotowe” bywa nieczytelne. */
+[data-testid="stAlert"] p,
+[data-testid="stAlert"] div,
+[data-testid="stAlert"] span,
+[data-testid^="stAlertContent"] { color: var(--text) !important; }
+[data-testid="stAlert"] svg { fill: currentColor !important; }
+.stSuccess { background: var(--success-bg) !important; border-left-color: var(--success) !important; }
+.stWarning { background: var(--warning-bg) !important; border-left-color: var(--warning) !important; }
+.stError   { background: var(--danger-bg)  !important; border-left-color: var(--danger)  !important; }
+.stInfo    { background: var(--info-bg)    !important; border-left-color: var(--border-strong) !important; }
+
+/* ── Rozwijane sekcje ── */
+[data-testid="stExpander"] {
+    background: var(--surface) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius) !important;
+}
+[data-testid="stExpander"] summary { color: var(--text) !important; font-size: 0.88rem !important; }
+[data-testid="stExpander"] summary:hover { color: var(--accent-text) !important; }
+
+/* ── Postęp i spinner ── */
+[data-testid="stProgress"] > div > div > div { background: var(--accent) !important; }
+[data-testid="stProgress"] > div > div { background: var(--surface-3) !important; }
+[data-testid="stSpinner"] > div { border-top-color: var(--accent) !important; }
+
+hr, [data-testid="stDivider"] hr { border-color: var(--border) !important; }
+"""
+
+
+# ── Komponenty własne ────────────────────────────────────────────────────────
+_COMPONENTS = """
+/* ── Pasek tytułowy ── */
+.topbar {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    padding-bottom: 0.7rem;
     border-bottom: 1px solid var(--border);
-    margin-bottom: 12px;
-    margin-top: 16px;
-    font-family: 'Orbitron', sans-serif;
-    text-shadow: 0 0 10px var(--glow-cyan);
+    margin-bottom: 1rem;
 }
-.ctrl-section:first-of-type { margin-top: 4px; }
-
-/* ─── SECTION SUBHEADER ─── */
-.f1-subheader {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 0.72rem;
+.topbar-mark {
+    width: 4px; height: 22px;
+    background: var(--accent);
+    border-radius: 2px;
+    align-self: center;
+}
+.topbar-title {
+    font-size: 1.05rem;
     font-weight: 700;
-    letter-spacing: 0.18em;
+    letter-spacing: 0.02em;
     color: var(--heading);
-    padding: 10px 0 10px 14px;
-    border-left: 3px solid var(--accent-3);
-    margin-bottom: 14px;
-    text-transform: uppercase;
-    position: relative;
-    text-shadow: 0 0 12px var(--glow-cyan);
 }
-.f1-subheader::after {
-    content: "";
-    position: absolute;
-    left: 14px; right: 0; bottom: 0;
-    height: 1px;
-    background: linear-gradient(90deg, var(--glow-cyan), transparent);
-}
+.topbar-sub { font-size: 0.8rem; color: var(--muted); }
 
-/* ─── HERO BANNER ─── */
-.hero {
-    position: relative;
+/* ── Pasek sesji: co właściwie oglądam ── */
+.session-bar {
     display: flex;
     align-items: center;
-    gap: 20px;
-    padding: 26px 32px;
-    margin: -1rem -1rem 2rem;
-    background: linear-gradient(135deg, var(--hero-a) 0%, var(--hero-b) 100%);
-    overflow: hidden;
+    justify-content: space-between;
     flex-wrap: wrap;
-    border-bottom: 1px solid var(--border);
-}
-.hero::before {
-    content: "";
-    position: absolute; inset: 0;
-    background:
-        repeating-linear-gradient(90deg, var(--grid) 0 1px, transparent 1px 44px),
-        repeating-linear-gradient(0deg,  var(--grid) 0 1px, transparent 1px 44px);
-    pointer-events: none;
-}
-.hero::after {
-    content: "";
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, var(--accent) 0%, var(--accent-4) 30%, var(--accent-3) 60%, var(--accent-2) 85%, transparent 100%);
-    box-shadow: 0 0 18px var(--glow), 0 0 36px var(--glow-cyan);
-}
-.hero > * { position: relative; z-index: 1; }
-.hero-stripe {
-    position: absolute;
-    left: 0; top: 0; bottom: 0;
-    width: 4px;
-    background: linear-gradient(180deg, var(--accent-2), var(--accent), var(--accent-3));
-    box-shadow: 2px 0 24px var(--glow), 2px 0 40px var(--glow-cyan);
-}
-.hero-icon {
-    font-size: 2.6rem;
-    line-height: 1;
-    filter: drop-shadow(0 0 18px var(--glow)) drop-shadow(0 0 36px var(--glow));
-}
-.hero-title {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 1.9rem;
-    letter-spacing: 0.12em;
-    color: var(--heading);
-    font-weight: 900;
-    text-shadow: 0 0 30px var(--glow), 0 2px 0 rgba(0,0,0,0.5);
-}
-.hero-sub {
-    font-size: 0.6rem;
-    color: var(--accent-3);
-    letter-spacing: 0.32em;
-    text-transform: uppercase;
-    margin-top: 5px;
-    font-family: 'Orbitron', sans-serif;
-    text-shadow: 0 0 10px var(--glow-cyan);
-}
-.hero-tag {
-    margin-left: auto;
-    font-size: 0.55rem;
-    letter-spacing: 0.24em;
-    text-transform: uppercase;
-    color: var(--accent-2);
-    border: 1px solid var(--glow-lime);
-    padding: 7px 12px;
-    border-radius: 2px;
-    background: var(--glow-lime);
-    font-family: 'Orbitron', sans-serif;
-    box-shadow: 0 0 14px var(--glow-lime);
-}
-.hero-tag::before {
-    content: "● ";
-    animation: blink 1.4s ease-in-out infinite;
-}
-@keyframes blink {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0.15; }
-}
-
-/* ─── WELCOME SCREEN ─── */
-.welcome { margin-top: 10px; margin-bottom: 30px; }
-.welcome-title {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 2.4rem;
-    letter-spacing: 0.1em;
-    color: var(--heading);
-    font-weight: 900;
-    text-shadow: 0 0 50px var(--glow);
-}
-.welcome-sub {
-    font-size: 0.92rem;
-    color: var(--muted);
-    margin-top: 10px;
-    letter-spacing: 0.04em;
-    line-height: 1.7;
-}
-.accent { color: var(--accent); font-weight: 700; letter-spacing: 0.1em; }
-
-/* ─── FEATURE CARDS ─── */
-.feature-card {
-    background: linear-gradient(160deg, var(--feature-a), var(--feature-b));
+    gap: 0.6rem;
+    background: var(--surface);
     border: 1px solid var(--border);
-    border-top: none;
-    border-radius: 3px;
-    padding: 18px 16px;
-    margin-bottom: 12px;
-    position: relative;
-    overflow: hidden;
-    transition: transform 0.22s ease, box-shadow 0.22s ease;
-    animation: fadeUp 0.55s ease both;
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 0.7rem 0.95rem;
+    margin-bottom: 0.85rem;
 }
-.feature-card::before {
+.session-name {
+    font-size: 1rem;
+    font-weight: 650;
+    color: var(--heading);
+}
+.session-meta {
+    font-size: 0.82rem;
+    color: var(--text-2);
+    margin-top: 0.15rem;
+}
+.session-tag {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 0.2rem 0.65rem;
+    white-space: nowrap;
+}
+
+/* ── Listwa kierowców: kolor = kierowca ── */
+.driver-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+}
+.driver-pill {
+    flex: 1 1 150px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--c);
+    border-radius: var(--radius);
+    padding: 0.6rem 0.8rem;
+}
+.dp-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+}
+.dp-code {
+    font-family: var(--font-mono);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--c);
+    letter-spacing: 0.04em;
+}
+.dp-pos {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+}
+.dp-time {
+    font-family: var(--font-mono);
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0.25rem 0 0.1rem;
+    letter-spacing: -0.02em;
+}
+.dp-delta {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--text-2);
+}
+.dp-delta.lead { color: var(--accent-text); font-weight: 600; }
+.dp-meta {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 0.35rem;
+    padding-top: 0.35rem;
+    border-top: 1px solid var(--border);
+}
+
+/* ── Tabele danych ──
+   Rysujemy je sami (patrz components.table), więc trzymają się motywu
+   aplikacji, a nie motywu Streamlita. */
+.table-wrap {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: auto;
+    margin-bottom: 0.3rem;
+}
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+}
+.data-table thead th {
+    position: sticky;
+    top: 0;
+    background: var(--surface-2);
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: left;
+    padding: 0.55rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+}
+.data-table td {
+    padding: 0.5rem 0.75rem;
+    color: var(--text);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+}
+.data-table tbody tr:last-child td { border-bottom: none; }
+.data-table tbody tr:nth-child(even) { background: var(--surface); }
+.data-table tbody tr:hover { background: var(--surface-2); }
+.data-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Objaśnienie pod tabelą lub wykresem */
+.hint {
+    font-size: 0.76rem;
+    color: var(--muted);
+    line-height: 1.5;
+    margin: 0.15rem 0 0.4rem;
+}
+
+/* ── Nagłówek sekcji wewnątrz zakładki ── */
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 1.5rem 0 0.6rem;
+}
+.section-title::after {
     content: "";
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: var(--accent, #e10600);
-    box-shadow: 0 0 14px var(--accent, #e10600);
+    flex: 1;
+    height: 1px;
+    background: var(--border);
 }
-.feature-card::after {
-    content: "";
-    position: absolute;
-    bottom: 7px; right: 9px;
-    width: 16px; height: 16px;
-    border-right: 1px solid var(--border-soft);
-    border-bottom: 1px solid var(--border-soft);
+.section-title:first-child { margin-top: 0.3rem; }
+
+/* ── Kafelek z podpowiedzią ── */
+.note-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.1rem;
+    font-size: 0.88rem;
+    color: var(--text-2);
+    line-height: 1.6;
 }
-.feature-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 14px 36px rgba(0,0,0,0.3), 0 0 28px var(--glow);
+.note-card b, .note-card strong { color: var(--text); }
+.note-card ol, .note-card ul { margin: 0.5rem 0 0 1.1rem; padding: 0; }
+.note-card li { margin-bottom: 0.3rem; color: var(--text-2); }
+
+/* ── Ekran powitalny ── */
+.welcome {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.6rem 1.5rem;
+    margin-bottom: 1.1rem;
 }
-.feature-icon { font-size: 1.5rem; margin-bottom: 10px; }
-.feature-title {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 0.74rem;
+.welcome-title {
+    font-size: 1.35rem;
     font-weight: 700;
     color: var(--heading);
-    letter-spacing: 0.12em;
-    margin-bottom: 8px;
-    text-transform: uppercase;
+    margin-bottom: 0.4rem;
 }
-.feature-desc { font-size: 0.76rem; color: var(--muted); line-height: 1.55; }
+.welcome-sub { font-size: 0.92rem; color: var(--text-2); line-height: 1.65; }
+.welcome-sub .accent { color: var(--accent-text); font-weight: 600; }
 
-/* ─── NOTE CARD ─── */
-.note-card {
-    background: linear-gradient(135deg, var(--note-a), var(--note-b));
+.feature-card {
+    background: var(--surface);
     border: 1px solid var(--border);
-    border-left: 3px solid var(--accent-3);
-    border-radius: 4px;
-    padding: 14px 18px;
+    border-left: 3px solid var(--accent-c, var(--border-strong));
+    border-radius: var(--radius-sm);
+    padding: 0.8rem 0.9rem;
+    margin-bottom: 0.6rem;
+    height: 100%;
+}
+.feature-title {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.2rem;
+}
+.feature-desc { font-size: 0.76rem; color: var(--muted); line-height: 1.5; }
+
+/* ── Porównanie sesji ── */
+.compare-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--c, var(--accent));
+    border-radius: var(--radius);
+    padding: 0.7rem 0.9rem;
+}
+.compare-label {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+}
+.compare-name { font-size: 0.98rem; font-weight: 650; color: var(--heading); margin-top: 0.15rem; }
+.compare-meta { font-size: 0.78rem; color: var(--text-2); }
+.compare-vs {
+    text-align: center;
+    font-family: var(--font-mono);
     font-size: 0.8rem;
     color: var(--muted);
-    letter-spacing: 0.03em;
-    box-shadow: -3px 0 14px var(--glow-cyan);
+    padding-top: 1.5rem;
 }
 
-/* ─── RESULTS HEADER ─── */
-.results-header {
+/* ── Sekcja w sidebarze ── */
+.side-section {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 18px 24px;
-    border: 1px solid var(--border);
-    border-left: 4px solid var(--accent);
-    border-radius: 4px;
-    background: linear-gradient(135deg, var(--results-a) 0%, var(--results-b) 100%);
-    box-shadow: -4px 0 24px var(--glow), 0 12px 36px rgba(0,0,0,0.3);
-    margin-bottom: 18px;
-    flex-wrap: wrap;
-    position: relative;
-    overflow: hidden;
-}
-.results-header::before {
-    content: "";
-    position: absolute; inset: 0;
-    background: repeating-linear-gradient(90deg, transparent 0 43px, var(--grid) 43px 44px);
-    pointer-events: none;
-}
-.results-icon { font-size: 1.5rem; position: relative; z-index: 1; }
-.results-title {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 1.25rem;
-    letter-spacing: 0.1em;
-    color: var(--heading);
-    font-weight: 800;
-    position: relative; z-index: 1;
-}
-.results-meta {
-    font-size: 0.6rem;
+    gap: 0.45rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
     color: var(--muted);
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    font-family: 'Orbitron', sans-serif;
-    position: relative; z-index: 1;
+    margin: 1.1rem 0 0.5rem;
 }
-.results-badge {
-    margin-left: auto;
-    font-size: 0.54rem;
-    letter-spacing: 0.26em;
-    text-transform: uppercase;
-    color: var(--accent-3);
-    background: var(--badge-bg);
-    border: 1px solid var(--badge-border);
-    padding: 6px 12px;
-    border-radius: 2px;
-    font-family: 'Orbitron', sans-serif;
-    box-shadow: 0 0 14px var(--glow-cyan);
-    position: relative; z-index: 1;
-}
-
-/* ─── DRIVER CARD ─── */
-.driver-card {
-    background: linear-gradient(160deg, var(--driver-a), var(--driver-b));
-    border: 1px solid var(--border);
-    border-top: none;
-    border-radius: 4px;
-    padding: 18px;
-    margin-bottom: 10px;
-    position: relative;
-    overflow: hidden;
-}
-.driver-card::before {
+.side-section::after {
     content: "";
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-    background: var(--accent, #e10600);
-    box-shadow: 0 0 20px var(--accent, #e10600), 0 0 44px var(--glow);
-}
-.driver-card-header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
-.driver-title {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 1.6rem;
-    letter-spacing: 0.08em;
-    color: var(--accent, #e10600);
-    font-weight: 900;
-    text-shadow: 0 0 22px var(--glow);
-}
-.driver-badge {
-    font-size: 0.58rem;
-    color: var(--accent-2);
-    letter-spacing: 0.24em;
-    text-transform: uppercase;
-    font-family: 'Orbitron', sans-serif;
-}
-.driver-time {
-    font-family: 'Orbitron', monospace;
-    font-size: 1.1rem;
-    color: var(--heading);
-    margin-bottom: 14px;
-    letter-spacing: 0.07em;
-}
-.driver-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; }
-.driver-chip {
-    background: var(--chip-bg);
-    border: 1px solid var(--border-soft);
-    border-radius: 3px;
-    padding: 8px 6px;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-}
-.driver-chip::before {
-    content: "";
-    position: absolute;
-    top: 0; left: 0; right: 0;
+    flex: 1;
     height: 1px;
-    background: var(--badge-border);
+    background: var(--border);
 }
-.driver-chip-label {
-    font-size: 0.55rem;
-    color: var(--accent-3);
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    font-family: 'Orbitron', sans-serif;
-}
-.driver-chip-value {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.84rem;
-    color: var(--heading);
-    font-weight: 500;
-}
-.driver-meta {
-    font-size: 0.6rem;
-    color: var(--muted);
-    letter-spacing: 0.16em;
-    font-family: 'Orbitron', sans-serif;
-    text-transform: uppercase;
-}
-
-/* ─── ANIMATIONS ─── */
-.fade-in  { animation: fadeUp 0.6s ease both; }
-.delay-1  { animation-delay: 0.06s; }
-.delay-2  { animation-delay: 0.12s; }
-.delay-3  { animation-delay: 0.18s; }
-.delay-4  { animation-delay: 0.24s; }
-.delay-5  { animation-delay: 0.30s; }
-.delay-6  { animation-delay: 0.36s; }
-
-@keyframes fadeUp {
-    from { opacity: 0; transform: translateY(10px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-@keyframes pulseGlow {
-    0%, 100% { box-shadow: 0 0 8px  var(--glow-cyan); }
-    50%       { box-shadow: 0 0 22px var(--glow-cyan), 0 0 44px var(--glow-cyan); }
-}
-
-/* ─── RESPONSIVE ─── */
-@media (max-width: 900px) {
-    .hero { margin: -1rem -1rem 1.4rem; padding: 18px 22px; }
-    .hero-title { font-size: 1.4rem; }
-    .hero-tag, .results-badge { margin-left: 0; }
-    .driver-grid { grid-template-columns: 1fr 1fr; }
-    .ctrl-panel { padding: 14px 16px 12px; }
-}
-</style>
+.side-section:first-child { margin-top: 0.2rem; }
 """
-    return root + body

@@ -1,17 +1,28 @@
+# Motyw Streamlita (tabele, pola formularzy, menu).
+# Bez wymuszonego `base` Streamlit dopasowuje się do ustawienia przeglądarki
+# lub wyboru w menu ⋮ → Settings → Appearance, a dashboard startuje w tym samym
+# motywie (patrz ui/state.py: current_theme).
 [theme]
-base            = "dark"
-primaryColor    = "#e10600"
-backgroundColor = "#0f0f0f"
+font = "monospace"
+
+[theme.dark]
+primaryColor            = "#e10600"
+backgroundColor         = "#0f0f0f"
 secondaryBackgroundColor = "#1a1a1a"
-textColor       = "#cccccc"
-font            = "monospace"
+textColor               = "#cccccc"
+
+[theme.light]
+primaryColor            = "#e10600"
+backgroundColor         = "#ffffff"
+secondaryBackgroundColor = "#f5f7fb"
+textColor               = "#1a2540"
 
 [browser]
 gatherUsageStats = false
 
 [server]
-headless         = true
-maxUploadSize    = 50
+headless      = true
+maxUploadSize = 50
 
 [runner]
-fastReruns       = true
+fastReruns = true

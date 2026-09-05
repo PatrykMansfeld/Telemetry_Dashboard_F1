@@ -1,44 +1,55 @@
+"""Ekran powitalny — widoczny, dopóki nie ma wyników analizy."""
+
 from __future__ import annotations
 
 import streamlit as st
 
+from f1tele.config import DEFAULT_DRIVERS, DEFAULT_ROUND, DEFAULT_YEAR
+
+# (tytuł, opis, kolor akcentu) — kolory te same, co w listwie kierowców
+FEATURES = [
+    ("Telemetria",    "Prędkość, gaz, hamulec, biegi, RPM i delta czasu",      "#e10600"),
+    ("Zakręty",       "Punkt hamowania, prędkość apeksu, powrót do gazu",      "#ff8000"),
+    ("Sektory",       "Mini-sektory, dominacja, mapa ciepła S1/S2/S3",         "#c8ff3d"),
+    ("Styl jazdy",    "Radar 10 metryk i porównanie słupkowe",                 "#00d1ff"),
+    ("Mapa toru",     "Dominacja, prędkość, biegi, DRS, animacja okrążenia",   "#3bd971"),
+    ("Race pace",     "Tempo wyścigu, degradacja opon, stinty, pozycje",       "#f9c74f"),
+    ("Podsumowanie",  "Czasy, rozbicie na sektory i strata do lidera",         "#a78bfa"),
+    ("Porównanie",    "Dwie sesje obok siebie — inne GP albo inny sezon",      "#fb7185"),
+]
+
 
 def render_welcome() -> None:
-    st.markdown("""
-    <div class="welcome fade-in">
-        <div class="welcome-title">Witaj w F1 Telemetria</div>
+    st.markdown(f"""
+    <div class="welcome">
+        <div class="welcome-title">Zacznij od wyboru sesji</div>
         <div class="welcome-sub">
-            Wybierz sesję i kierowców w panelu powyżej, następnie kliknij
-            <span class="accent">URUCHOM ANALIZĘ</span>.
+            W panelu po lewej ustaw rok, rundę i typ sesji, wybierz kierowców,
+            a następnie kliknij <span class="accent">Uruchom analizę</span>.<br>
+            Domyślnie: <b>{DEFAULT_YEAR}</b>, runda <b>{DEFAULT_ROUND}</b>,
+            kwalifikacje, {", ".join(DEFAULT_DRIVERS)}.
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    features = [
-        ("📈", "Telemetria",      "Prędkość · Delta · Gaz · Hamulec · Biegi · RPM",        "#e10600"),
-        ("🔄", "Zakręty",         "Punkt hamowania · Prędkość apeksu · Wyjście z gazu",      "#ff7a00"),
-        ("🏁", "Sektory",         "Mini-sektory · Dominacja · Mapa ciepła S1/S2/S3",         "#c8ff3d"),
-        ("🎯", "Styl jazdy",      "Radar 10 metryk · Porównanie słupkowe",                   "#00d1ff"),
-        ("🗺️", "Mapa toru",      "Dominacja · Gradient prędkości · Biegi · Animacja",        "#3bd971"),
-        ("🏎", "Race Pace",       "Czas okrążenia · Trend · Składy opon · Sfinty",           "#f9c74f"),
-        ("📊", "Podsumowanie",    "Tabela wyników · Profile kierowców · Czasy sektorów",      "#a78bfa"),
-        ("🔀", "Cross-session",   "Porównanie sesji A vs B · Telemetria między GP / latami",  "#fb7185"),
-    ]
-    cols = st.columns(4)
-    for i, (icon, title, desc, accent) in enumerate(features):
-        with cols[i % 4]:
+    st.markdown('<div class="section-title">Co policzy analiza</div>',
+                unsafe_allow_html=True)
+
+    columns = st.columns(4)
+    for i, (title, description, accent) in enumerate(FEATURES):
+        with columns[i % 4]:
             st.markdown(f"""
-            <div class="feature-card" style="--accent:{accent}">
-                <div class="feature-icon">{icon}</div>
+            <div class="feature-card" style="--accent-c:{accent}">
                 <div class="feature-title">{title}</div>
-                <div class="feature-desc">{desc}</div>
+                <div class="feature-desc">{description}</div>
             </div>
             """, unsafe_allow_html=True)
 
     st.markdown("""
-    <div class="note-card fade-in delay-6">
-        💡 Wszystkie wykresy są interaktywne — zoom, hover, pan.
-        Dane pobierane przez FastF1 i cache'owane lokalnie.<br>
-        Kliknij <b>🔄 Załaduj kierowców z sesji</b>, aby pobrać aktualną listę kierowców dla wybranego GP.
+    <div class="note-card" style="margin-top:1rem">
+        Dane pochodzą z <b>FastF1</b> i są zapisywane w lokalnym cache — pierwsza
+        analiza danej sesji trwa dłużej, każda kolejna rusza od razu.
+        Wykresy są interaktywne: przybliżanie, przesuwanie i podgląd wartości
+        pod kursorem.
     </div>
     """, unsafe_allow_html=True)

@@ -1,0 +1,35 @@
+# Konfiguracja lintera/formatera Ruff.
+# Uruchomienie:  ruff check .        (błędy)
+#                ruff format --diff . (podgląd formatowania)
+
+line-length = 100
+target-version = "py310"
+exclude = ["cache", "venv", ".venv"]
+
+[lint]
+select = [
+    "E",    # pycodestyle — błędy
+    "W",    # pycodestyle — ostrzeżenia
+    "F",    # pyflakes — nieużywane importy i zmienne
+    "I",    # isort — kolejność importów
+    "B",    # bugbear — typowe pułapki
+    "UP",   # pyupgrade — przestarzała składnia
+    "C4",   # comprehensions
+    "RET",  # zbędne else po return
+]
+ignore = [
+    "E501",   # długość linii pilnuje formater, nie linter
+    "B008",   # wywołania w argumentach domyślnych (Streamlit tak działa)
+    "RET504", # nazwana zmienna przed return bywa czytelniejsza
+    "C408",   # dict(...) zamiast {...} — tak wygląda idiomatyczny kod Plotly
+    "B905",   # zip(strict=) — zestawiamy ciągi o znanej, zgodnej długości
+]
+
+[lint.per-file-ignores]
+# app.py musi wywołać set_page_config przed importami UI — stąd importy nie na górze.
+"app.py" = ["E402"]
+# W testach nazwy prywatne i długie asercje są w porządku.
+"tests/*" = ["B011"]
+
+[lint.isort]
+known-first-party = ["f1tele", "ui"]
